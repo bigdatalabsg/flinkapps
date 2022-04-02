@@ -110,8 +110,7 @@ object flinkStreamingInput {
 
     val _keyedStream = _trade
       .filter(x=>
-        x.symb == "IBM" &&
-          (x.high >= _high.toFloat || x.low <= _low.toFloat)
+        x.symb == "IBM" && (x.high >= _high.toFloat || x.low <= _low.toFloat)
       )
 
     _keyedStream.print()
