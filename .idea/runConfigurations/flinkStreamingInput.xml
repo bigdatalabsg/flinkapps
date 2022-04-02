@@ -1,0 +1,10 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="flinkStreamingInput" type="Application" factoryName="Application">
+    <option name="MAIN_CLASS_NAME" value="com.bigdatalabs.flinkapps.source.flinkStreamingInput" />
+    <module name="flinkApps" />
+    <option name="PROGRAM_PARAMETERS" value="--topic_source local-kafka-source --topic_sink local-kafka-sink --groupId flink-kafka --high 100 --low 50" />
+    <method v="2">
+      <option name="Make" enabled="true" />
+    </method>
+  </configuration>
+</component>
