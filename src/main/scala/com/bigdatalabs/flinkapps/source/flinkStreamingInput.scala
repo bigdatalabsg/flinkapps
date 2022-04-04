@@ -2,6 +2,7 @@ package com.bigdatalabs.flinkapps.source
 
 import org.apache.flink.api.common.serialization.SimpleStringSchema
 import org.apache.flink.api.java.utils.ParameterTool
+import org.apache.flink.streaming.api.TimeCharacteristic
 import org.apache.flink.streaming.api.scala._
 import org.apache.flink.streaming.connectors.kafka.FlinkKafkaConsumer
 
@@ -19,10 +20,10 @@ object flinkStreamingInput {
 
   def main(args: Array[String]): Unit = {
 
-    if (args.length < 2) {
+    if (args.length < 6) {
       System.err.println(
         s"""
-           |Usage: --topic_source <source topic name> --topic_sink <sink topic name> --groupId <group name> --high <number> --low <number>
+           |Usage: --topic_source <source topic name> --topic_sink <sink topic name> --groupId <group name> --symb <symbol> --high <number> --low <number>
         """.stripMargin)
       System.exit(1)
     }
@@ -36,6 +37,7 @@ object flinkStreamingInput {
     val _groupId = _params.get("groupId")
 
     //Thresholds
+    val _symb = _params.get("symb")
     val _open =_params.get("open")
     val _high =_params.get("high")
     val _low =_params.get("low")
@@ -43,8 +45,7 @@ object flinkStreamingInput {
 
     println("Awaiting Stream . . .")
     print("=======================================================================\n")
-
-    println("TOPIC SOURCE : " + _topic_source +"," + "TOPIC SINK : " + _topic_sink + "," + "GROUP : "+ _groupId + "," + "HIGH :" + _high + "," + "LOW :" + _low)
+    println("TOPIC SOURCE : " + _topic_source +"," + "TOPIC SINK: " + _topic_sink + "|" + "GROUP: " + _groupId + "," + "SYMB: " + _symb + "," + "HIGH: " + _high + "," + "LOW: " + _low)
 
     // start a checkpoint every 10000 ms
     _env.enableCheckpointing(10000)
@@ -67,6 +68,9 @@ object flinkStreamingInput {
 
     // generate a Watermark every second
     _env.getConfig.setAutoWatermarkInterval(5000)
+
+    //Event Time, Ingestion Time, Processing Time
+    _env.setStreamTimeCharacteristic(TimeCharacteristic.EventTime)
 
     //kafka broker properties
     val _kfkaprop = new Properties()
@@ -110,7 +114,7 @@ object flinkStreamingInput {
 
     val _keyedStream = _trade
       .filter(x=>
-        x.symb == "IBM" && (x.high >= _high.toFloat || x.low <= _low.toFloat)
+        x.symb == _symb && (x.high >= _high.toFloat || x.low <= _low.toFloat)
       )
 
     _keyedStream.print()
