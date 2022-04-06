@@ -45,27 +45,28 @@ object flinkStreamingInput {
 
     println("Awaiting Stream . . .")
     print("=======================================================================\n")
-    println("TOPIC SOURCE : " + _topic_source +"," + "TOPIC SINK: " + _topic_sink + "|" + "GROUP: " + _groupId + "," + "SYMB: " + _symb + "," + "HIGH: " + _high + "," + "LOW: " + _low)
+    println(
+      "TOPIC SOURCE : " + _topic_source +","
+      + "TOPIC SINK: " + _topic_sink + "|"
+      + "GROUP: " + _groupId + ","
+      + "SYMB: " + _symb + ","
+      + "HIGH: " + _high
+      + "," + "LOW: " + _low
+    )
 
     // start a checkpoint every 10000 ms
     _env.enableCheckpointing(10000)
-
     //Pause between Check Points - milli seconds
     // make sure 500 ms of progress happen between checkpoints
     _env.getCheckpointConfig.setMinPauseBetweenCheckpoints(500)
-
     // set mode to exactly-once (this is the default)
     _env.getCheckpointConfig.setCheckpointingMode(CheckpointingMode.EXACTLY_ONCE)
-
     // checkpoints have to complete within one minute, or are discarded
     _env.getCheckpointConfig.setCheckpointTimeout(60000)
-
     // prevent the tasks from failing if an error happens in their checkpointing, the checkpoint will just be declined.
     _env.getCheckpointConfig.setTolerableCheckpointFailureNumber(3)
-
     // allow only one checkpoint to be in progress at the same time
     _env.getCheckpointConfig.setMaxConcurrentCheckpoints(1)
-
     // generate a Watermark every second
     _env.getConfig.setAutoWatermarkInterval(5000)
 
@@ -112,15 +113,14 @@ object flinkStreamingInput {
 
     //Filter, Apply Intercepting Logic
 
+    /*val _keyedStream = _trade
+     .filter(x => x.symb == "ABB" || x.symb == "IBM")*/
+
+    //
     val _keyedStream = _trade
       .filter(x=>
         x.symb == _symb && (x.high >= _high.toFloat || x.low <= _low.toFloat)
       )
-
-    _keyedStream.print()
-
-    /*val _keyedStream = _trade
-      .filter(x => x.symb == "ABB" || x.symb == "IBM")*/
 
     /*val _keyedStream = _trade
       .filter(x => x.symb == "ABB" || x.symb == "IBM" &&
@@ -130,7 +130,7 @@ object flinkStreamingInput {
       )*/
 
     //Test for Filtered Data
-    _keyedStream.print()
+    _keyedStream.map(_.toString.split(",")).printToErr()
 
     /*
     //Define a Producer
