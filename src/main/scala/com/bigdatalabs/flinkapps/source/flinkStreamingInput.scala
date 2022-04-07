@@ -1,5 +1,12 @@
 package com.bigdatalabs.flinkapps.source
 
+/*
+ * @Author: Anand
+ * @Date: 2022/04/03
+ * @Description: Flink Kafka Source and Sink with Flink Kafka Connector, Removed in Flink-1.15
+
+ */
+
 import org.apache.flink.api.common.serialization.SimpleStringSchema
 import org.apache.flink.api.java.utils.ParameterTool
 import org.apache.flink.streaming.api.TimeCharacteristic
@@ -106,8 +113,13 @@ object flinkStreamingInput {
 
     //Apply Schema from Entity Case Class
     val _trade = _parsedStream.map(record =>
-      trade(record.xchange, record.symb, record.trdate,
-        record.open, record.high, record.low, record.close,
+      trade(record.xchange,
+        record.symb,
+        record.trdate,
+        record.open,
+        record.high,
+        record.low,
+        record.close,
         record.volume,
         record.adj_close))
 
