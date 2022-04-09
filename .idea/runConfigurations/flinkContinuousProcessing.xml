@@ -2,7 +2,7 @@
   <configuration default="false" name="flinkContinuousProcessing" type="Application" factoryName="Application">
     <option name="MAIN_CLASS_NAME" value="com.bigdatalabs.flinkapps.source.flinkContinuousProcessing" />
     <module name="flinkApps" />
-    <option name="PROGRAM_PARAMETERS" value="--topic_source local-kafka-source --topic_sink local-kafka-sink --groupId flink-kafka --symb IBM --high 600 --low 20" />
+    <option name="PROGRAM_PARAMETERS" value="--topic_source loc-kfka-src --topic_sink loc-kfka-snk --groupId flnk-kfka --symb ABB --high 100 --low 5" />
     <method v="2">
       <option name="Make" enabled="true" />
     </method>
