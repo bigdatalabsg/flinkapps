@@ -8,26 +8,27 @@ package com.bigdatalabs.flinkapps.source
  */
 
 
+import java.util.Properties
+
+import com.bigdatalabs.flinkapps.common.dateFormatter.{convertStringToDate, extractYr}
 import com.bigdatalabs.flinkapps.entities.model.trade
-import org.apache.flink.api.java.utils.ParameterTool
-import org.apache.flink.api.scala._
 
 import org.apache.flink.streaming.api.scala.StreamExecutionEnvironment
 
-import java.util.Properties
+import org.apache.flink.api.scala._
+import org.apache.flink.api.java.utils.ParameterTool
 
 //new Kafak Source API
-import org.apache.flink.api.common.eventtime.WatermarkStrategy
 
 import org.apache.flink.connector.kafka.source.KafkaSource
 import org.apache.flink.connector.kafka.source.enumerator.initializer.OffsetsInitializer
 import org.apache.flink.api.common.serialization.SimpleStringSchema
 
+import org.apache.flink.api.common.eventtime.WatermarkStrategy
+
 import org.apache.flink.connector.kafka.sink.KafkaSink
 import org.apache.flink.connector.base.DeliveryGuarantee
 import org.apache.flink.connector.kafka.sink.KafkaRecordSerializationSchema
-
-
 
 object flinkContinuousProcessing {
 
@@ -50,10 +51,19 @@ object flinkContinuousProcessing {
 
     //Thresholds
     val _symb = _params.get("symb")
-    val _open =_params.get("open")
-    val _high =_params.get("high")
-    val _low =_params.get("low")
-    val _close =_params.get("close")
+    val _open = _params.get("open")
+    val _high = _params.get("high")
+    val _low = _params.get("low")
+    val _close = _params.get("close")
+
+    println(
+      "TOPIC SOURCE : " + _topic_source + ","
+        + "TOPIC SINK: " + _topic_sink + "|"
+        + "GROUP: " + _groupId + ","
+        + "SYMB: " + _symb + ","
+        + "HIGH: " + _high
+        + "," + "LOW: " + _low
+    )
 
     //kafka broker properties
     val _kfkaprop = new Properties()
@@ -64,7 +74,7 @@ object flinkContinuousProcessing {
 
     val _env: StreamExecutionEnvironment = StreamExecutionEnvironment.getExecutionEnvironment
 
-    val _source = KafkaSource.builder[String]
+    val _topicSource = KafkaSource.builder[String]
       .setBootstrapServers(_brokers)
       .setTopics(_topic_source)
       .setGroupId(_groupId)
@@ -72,7 +82,7 @@ object flinkContinuousProcessing {
       .setStartingOffsets(OffsetsInitializer.earliest)
       .build()
 
-    val _InputStream = _env.fromSource(_source, WatermarkStrategy.noWatermarks(), "New Kafka Source not Kafka Consumer")
+    val _InputStream = _env.fromSource(_topicSource, WatermarkStrategy.noWatermarks(), "New Kafka Source not Kafka Consumer")
 
     //_InputStream.print()
 
@@ -102,27 +112,36 @@ object flinkContinuousProcessing {
 
     /*val _keyedStream = _trade
      .filter(x => x.symb == "ABB" || x.symb == "IBM")*/
+    //val _test = _trade.map(y=> y.xchange + "," + y.symb + "," + y.trdate + "," + y.open + "," + y.high + "," + y.low + "," + y.close + "," + y.volume + "," + y.adj_close)
 
     //Alter Trigger
-    val _keyedStream = _trade
-      .filter(x=>
+    val _filteredStream = _trade
+      .filter(x =>
         x.symb == _symb && (x.high >= _high.toFloat || x.low <= _low.toFloat)
-      )
+      ).map(y => y.xchange + ","
+      + y.symb + "," + y.trdate + "," + y.open + ","
+      + y.high + "," + y.low + "," + y.close + ","
+      + y.volume + "," + y.adj_close + "," + (y.close - y.open))
 
-    /*val _keyedStream = _trade
+    /*
+    val _keyedStream = _trade
       .filter(x => x.symb == "ABB" || x.symb == "IBM" &&
         x.high == _high || x.low== _low &&
         extractYr(convertStringToDate(x.trdate)) >= 2010 &&
         extractYr(convertStringToDate(x.trdate)) <= 2011
-      )*/
+      ).map(y=> y.xchange + ","
+      + y.symb + "," + y.trdate + "," + y.open + ","
+      + y.high + "," + y.low + "," + y.close + ","
+      + y.volume + "," + y.adj_close + "," + (y.close-y.open))
+    */
 
     //Test for Filtered Data
-    _keyedStream.print()
+    _filteredStream.print()
 
     val properties = new Properties()
     properties.setProperty("transaction.timeout.ms", "10000")
 
-    val _sink = KafkaSink.builder()
+    val _topicSink = KafkaSink.builder()
       .setBootstrapServers(_brokers)
       .setKafkaProducerConfig(properties)
       .setDeliverGuarantee(DeliveryGuarantee.EXACTLY_ONCE)
@@ -133,9 +152,10 @@ object flinkContinuousProcessing {
         .build()
       ).build()
 
-    _keyedStream.map(_.toString).sinkTo(_sink)
+    //Publish to Kafka Producrer
+    _filteredStream.sinkTo(_topicSink)
 
-    _env.execute("new flink-Kafka-Source")
+    _env.execute("new flink-Kafka-Source 1.14.4")
 
   }
 }

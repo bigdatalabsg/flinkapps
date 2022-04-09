@@ -19,8 +19,8 @@ import java.util.Properties
 import org.apache.flink.streaming.api.CheckpointingMode
 
 //Entity
-//import com.anrisu.flinkapps.entities.model.{trade,atmlog}
 import com.bigdatalabs.flinkapps.entities.model.trade
+
 //Common
 
 object flinkStreamingInput {
@@ -36,8 +36,7 @@ object flinkStreamingInput {
     }
 
     //fetch Inputs
-    val _params = ParameterTool.fromArgs(args)
-    val _env: StreamExecutionEnvironment = StreamExecutionEnvironment.getExecutionEnvironment
+    val _params : ParameterTool = ParameterTool.fromArgs(args)
 
     val _topic_source = _params.get("topic_source")
     val _topic_sink = _params.get("topic_sink")
@@ -61,6 +60,7 @@ object flinkStreamingInput {
       + "," + "LOW: " + _low
     )
 
+    val _env: StreamExecutionEnvironment = StreamExecutionEnvironment.getExecutionEnvironment
     // start a checkpoint every 10000 ms
     _env.enableCheckpointing(10000)
     //Pause between Check Points - milli seconds
@@ -81,14 +81,14 @@ object flinkStreamingInput {
     _env.setStreamTimeCharacteristic(TimeCharacteristic.EventTime)
 
     //kafka broker properties
-    val _kfkaprop = new Properties()
+    val _kfkaprop: Properties = new Properties()
     //_kfkaprop.setProperty("zookeeper.connect","localhost:2181/kafka") //zookeeper
     _kfkaprop.setProperty("bootstrap.servers", "localhost:9092,localhost:9093,localhost:9094") //bootstrap
     _kfkaprop.setProperty("group.id", _groupId) // kafka group
     _kfkaprop.setProperty("auto.offset.reset", "latest")
 
     // create a Kafka consumer
-    val _kfkaconsumer = new FlinkKafkaConsumer[String](_topic_source, new SimpleStringSchema(), _kfkaprop)
+    val _kfkaconsumer= new FlinkKafkaConsumer[String](_topic_source, new SimpleStringSchema(), _kfkaprop)
 
     //Add a DataStream, from Consumer
     val _stream = _env.addSource(_kfkaconsumer)
@@ -112,7 +112,7 @@ object flinkStreamingInput {
       })
 
     //Apply Schema from Entity Case Class
-    val _trade = _parsedStream.map(record =>
+    val _trade= _parsedStream.map(record =>
       trade(record.xchange,
         record.symb,
         record.trdate,
@@ -142,7 +142,7 @@ object flinkStreamingInput {
       )*/
 
     //Test for Filtered Data
-    _keyedStream.map(_.toString.split(",")).printToErr()
+    _keyedStream.map(_.toString.split(","))
 
     /*
     //Define a Producer
@@ -151,12 +151,10 @@ object flinkStreamingInput {
     //This is a workaround, until a Custom Serializer can be Developed, after which there is no need to convert to String
     //Publish to Kafka Topic for Filtered Data
     _keyedStream.map(_.toString).addSink(_kfkaproducer)
-
     */
 
     //Execute
-    _env.execute("flink-Kafka-Input-Output")
-
+    _env.execute("flink-Kafka-Input-Output - 1.14.0")
     print("=======================================================================\n")
   }
 }
