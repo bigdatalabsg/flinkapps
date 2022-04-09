@@ -65,6 +65,17 @@ object flinkContinuousProcessing {
         + "," + "LOW: " + _low
     )
 
+    println("Awaiting Stream . . .")
+    print("=======================================================================\n")
+    println(
+      "TOPIC SOURCE : " + _topic_source +","
+        + "TOPIC SINK: " + _topic_sink + "|"
+        + "GROUP: " + _groupId + ","
+        + "SYMB: " + _symb + ","
+        + "HIGH: " + _high
+        + "," + "LOW: " + _low
+    )
+
     //kafka broker properties
     val _kfkaprop = new Properties()
     _kfkaprop.setProperty("bootstrap.servers", "localhost:9092,localhost:9093,localhost:9094") //bootstrap
