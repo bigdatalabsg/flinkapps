@@ -67,7 +67,6 @@ object flinkContinuousProcessing {
 
     //kafka broker properties
     val _kfkaprop = new Properties()
-    //_kfkaprop.setProperty("zookeeper.connect","localhost:2181/kafka") //zookeeper
     _kfkaprop.setProperty("bootstrap.servers", "localhost:9092,localhost:9093,localhost:9094") //bootstrap
     _kfkaprop.setProperty("group.id", _groupId) // kafka group
     _kfkaprop.setProperty("auto.offset.reset", "latest")
@@ -86,7 +85,7 @@ object flinkContinuousProcessing {
 
     //_InputStream.print()
 
-    //Split Stream into Columns
+    //Split Stream into Columns separated by comma
     val _parsedStream = _InputStream.map(
       lines => {
         val columns = lines.split(",")
@@ -101,7 +100,7 @@ object flinkContinuousProcessing {
         )
       })
 
-    //Apply Schema from Entity Case Class
+    //Apply model from Entity Case Class
     val _trade = _parsedStream.map(record =>
       trade(record.xchange, record.symb, record.trdate,
         record.open, record.high, record.low, record.close,
@@ -109,12 +108,13 @@ object flinkContinuousProcessing {
         record.adj_close))
 
     //Filter, Apply Intercepting Logic
-
-    /*val _keyedStream = _trade
-     .filter(x => x.symb == "ABB" || x.symb == "IBM")*/
+    /*
+    val _filteredStream = _trade
+     .filter(x => x.symb == "ABB" || x.symb == "IBM")
     //val _test = _trade.map(y=> y.xchange + "," + y.symb + "," + y.trdate + "," + y.open + "," + y.high + "," + y.low + "," + y.close + "," + y.volume + "," + y.adj_close)
+    */
 
-    //Alter Trigger
+    //Alter Filters amd Trigger
     val _filteredStream = _trade
       .filter(x =>
         x.symb == _symb && (x.high >= _high.toFloat || x.low <= _low.toFloat)
@@ -124,7 +124,7 @@ object flinkContinuousProcessing {
       + y.volume + "," + y.adj_close + "," + (y.close - y.open))
 
     /*
-    val _keyedStream = _trade
+    val _filteredStream = _trade
       .filter(x => x.symb == "ABB" || x.symb == "IBM" &&
         x.high == _high || x.low== _low &&
         extractYr(convertStringToDate(x.trdate)) >= 2010 &&
@@ -156,6 +156,5 @@ object flinkContinuousProcessing {
     _filteredStream.sinkTo(_topicSink)
 
     _env.execute("new flink-Kafka-Source 1.14.4")
-
   }
 }
