@@ -26,6 +26,8 @@ import org.apache.flink.connector.kafka.source.KafkaSource
 import org.apache.flink.connector.kafka.source.enumerator.initializer.OffsetsInitializer
 import org.apache.flink.api.common.serialization.SimpleStringSchema
 
+import org.apache.flink.api.scala.typeutils
+
 import org.apache.flink.api.common.eventtime.WatermarkStrategy
 
 import org.apache.flink.connector.kafka.sink.KafkaSink

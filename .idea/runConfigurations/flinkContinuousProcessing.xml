@@ -1,5 +1,6 @@
 <component name="ProjectRunConfigurationManager">
   <configuration default="false" name="flinkContinuousProcessing" type="Application" factoryName="Application">
+    <option name="INCLUDE_PROVIDED_SCOPE" value="true" />
     <option name="MAIN_CLASS_NAME" value="com.bigdatalabs.flinkapps.source.flinkContinuousProcessing" />
     <module name="flinkApps" />
     <option name="PROGRAM_PARAMETERS" value="--topic_source loc-kfka-src --topic_sink loc-kfka-snk --groupId flnk-kfka --symb ABB --high 100 --low 5" />
