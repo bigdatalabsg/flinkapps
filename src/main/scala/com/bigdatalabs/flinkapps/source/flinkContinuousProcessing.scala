@@ -141,7 +141,6 @@ object flinkContinuousProcessing {
         + y.high + "," + y.low + "," + y.close + ","
         + y.volume + "," + y.adj_close + "," + (y.close - y.open))
 
-
     /*
     val _filteredStream = _trade
       .filter(x => x.symb == "ABB" || x.symb == "IBM" &&
