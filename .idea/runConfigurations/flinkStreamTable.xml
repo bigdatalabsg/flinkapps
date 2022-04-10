@@ -1,0 +1,11 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="flinkStreamTable" type="Application" factoryName="Application">
+    <option name="INCLUDE_PROVIDED_SCOPE" value="true" />
+    <option name="MAIN_CLASS_NAME" value="com.bigdatalabs.flinkapps.source.flinkStreamTable" />
+    <module name="flinkApps" />
+    <option name="PROGRAM_PARAMETERS" value="--topic_source loc-kfka-src --topic_sink loc-kfka-snk --groupId flnk-kfka --symb IBM --high 100 --low 20" />
+    <method v="2">
+      <option name="Make" enabled="true" />
+    </method>
+  </configuration>
+</component>
