@@ -1,7 +1,7 @@
 package com.bigdatalabs.flinkapps.source
 
 import org.apache.flink.api.scala._
-import com.bigdatalabs.flinkapps.entities.model.trade
+import com.bigdatalabs.flinkapps.entities.model._ctrade
 import org.apache.flink.api.common.RuntimeExecutionMode
 import org.apache.flink.api.common.eventtime.WatermarkStrategy
 import org.apache.flink.api.common.serialization.SimpleStringSchema
@@ -9,8 +9,12 @@ import org.apache.flink.api.java.utils.ParameterTool
 import org.apache.flink.connector.kafka.source.KafkaSource
 import org.apache.flink.connector.kafka.source.enumerator.initializer.OffsetsInitializer
 import org.apache.flink.streaming.api.CheckpointingMode
-import org.apache.flink.streaming.api.scala.StreamExecutionEnvironment
+import org.apache.flink.streaming.api.scala.{DataStream, StreamExecutionEnvironment}
 import org.apache.flink.table.api.bridge.scala.StreamTableEnvironment
+import org.apache.flink.types.Row
+import org.apache.flink.connector.jdbc._
+
+import java.sql.PreparedStatement
 
 object flinkTableManipulation {
 
@@ -25,7 +29,9 @@ object flinkTableManipulation {
     }
 
     //fetch Inputs
-    val _params = ParameterTool.fromArgs(args)
+
+    val _params : ParameterTool = ParameterTool.fromArgs(args)
+
     val _topic_source = _params.get("topic_source")
     val _topic_sink = _params.get("topic_sink")
     val _groupId = _params.get("groupId")
@@ -49,11 +55,10 @@ object flinkTableManipulation {
         + "," + "LOW: " + _low
     )
 
-
+    //
     val _env: StreamExecutionEnvironment = StreamExecutionEnvironment.getExecutionEnvironment
     // set the batch runtime mode
     _env.setRuntimeMode(RuntimeExecutionMode.STREAMING)
-
 
     // start a checkpoint every 10000 ms
     _env.enableCheckpointing(120000)
@@ -82,50 +87,43 @@ object flinkTableManipulation {
       .setStartingOffsets(OffsetsInitializer.latest())
       .build()
 
-
-    val _InputStream = _env.fromSource(_topicSource, WatermarkStrategy.noWatermarks(), "New Kafka Source not Kafka Consumer")
+    //DataStream [String]
+    val _InputStream = _env.fromSource(_topicSource, WatermarkStrategy.noWatermarks(), "New Kafka Source from 1.14.4")
     //_InputStream.print()
 
-    //Split Stream into Columns separated by comma
+    //Read Each Line from Kafka Stream, Split at Comma
     val _parsedStream = _InputStream.map(
-      lines => {
-        val columns = lines.split(",")
-        trade(
-          columns(0), columns(1), columns(2),
-          columns(3).toFloat,
-          columns(4).toFloat,
-          columns(5).toFloat,
-          columns(6).toFloat,
-          columns(7).toInt,
-          columns(8).toFloat
+      _readLine => {
+        val _arr_daily_prices = _readLine.split(",")
+        _ctrade(
+          _arr_daily_prices(0), _arr_daily_prices(1), _arr_daily_prices(2),
+          _arr_daily_prices(3).toFloat,_arr_daily_prices(4).toFloat,_arr_daily_prices(5).toFloat,_arr_daily_prices(6).toFloat,
+          _arr_daily_prices(7).toInt,_arr_daily_prices(8).toFloat
         )
       })
 
     //Apply model from Entity Case Class
-    val _trade = _parsedStream.map(record =>
-      trade(record.xchange, record.symb, record.trdate,
+    val _trade: DataStream[_ctrade] = _parsedStream.map(record =>
+      _ctrade(record.xchange, record.symbol, record.trdate,
         record.open, record.high, record.low, record.close,
-        record.volume,
-        record.adj_close))
+        record.volume,record.adj_close))
 
-
+    //Table Stream Environment
     val _tableEnv: StreamTableEnvironment = StreamTableEnvironment.create(_env)
     val _inputTable = _tableEnv.fromDataStream(_trade)//.as("xchange","symbol","trdate","oopen","high","low","close","volume","adj-close")
 
     //_inputTable.printSchema()
 
     _tableEnv.createTemporaryView("flinkappDB.t_flnk_daily_prices",_inputTable)
-    //_tableEnv.createTable("flinkappDB.t_flnk_daily_prices",_inputTable)
     //val _resultTable = _tableEnv.sqlQuery("select * from t_flnk_daily_prices")
-    val _resultTable = _tableEnv.sqlQuery("SELECT symb, YEAR(CAST(trdate AS DATE)) AS yearr, min(high) as MIN_HIGH ,max(high) AS MAX_HIGH FROM flinkappDB.t_flnk_daily_prices GROUP BY symb, YEAR(CAST(trdate AS DATE))")
-    //val _resultTable = _tableEnv.sqlQuery("SELECT * FROM t_flnk_daily_prices")
-
+    val _resultTable = _tableEnv.sqlQuery("SELECT symbol, YEAR(CAST(trdate AS DATE)) AS yearr, min(high) as MIN_HIGH ,max(high) AS MAX_HIGH FROM flinkappDB.t_flnk_daily_prices GROUP BY symbol, YEAR(CAST(trdate AS DATE))")
     //_resultTable.printSchema()
 
-    val _resultStream = _tableEnv.toChangelogStream(_resultTable)
     //val _resultStream = _tableEnv.toDataStream(_resultTable)
+    val _resultStream = _tableEnv.toChangelogStream(_resultTable)
 
-    _resultStream.print()
+    //Print Aggretated Reults from Query
+    _resultStream.print()//.setParallelism(1)
 
     _env.execute("Table API")
 

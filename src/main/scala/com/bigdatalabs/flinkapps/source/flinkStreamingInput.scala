@@ -19,7 +19,7 @@ import java.util.Properties
 import org.apache.flink.streaming.api.CheckpointingMode
 
 //Entity
-import com.bigdatalabs.flinkapps.entities.model.trade
+import com.bigdatalabs.flinkapps.entities.model.{_ctrade}
 
 //Common
 
@@ -100,28 +100,19 @@ object flinkStreamingInput {
     val _parsedStream = _stream.map(
       lines => {
         val columns = lines.split(",")
-        trade(
+        _ctrade(
           columns(0), columns(1), columns(2),
-          columns(3).toFloat,
-          columns(4).toFloat,
-          columns(5).toFloat,
-          columns(6).toFloat,
-          columns(7).toInt,
-          columns(8).toFloat
+          columns(3).toFloat,columns(4).toFloat,columns(5).toFloat,columns(6).toFloat,
+          columns(7).toInt,columns(8).toFloat
         )
       })
 
     //Apply Schema from Entity Case Class
     val _trade= _parsedStream.map(record =>
-      trade(record.xchange,
-        record.symb,
-        record.trdate,
-        record.open,
-        record.high,
-        record.low,
-        record.close,
-        record.volume,
-        record.adj_close))
+      _ctrade(
+        record.xchange,record.symbol,record.trdate,
+        record.open,record.high,record.low,record.close,
+        record.volume,record.adj_close))
 
     //Filter, Apply Intercepting Logic
 
@@ -131,7 +122,7 @@ object flinkStreamingInput {
     //
     val _keyedStream = _trade
       .filter(x=>
-        x.symb == _symb && (x.high >= _high.toFloat || x.low <= _low.toFloat)
+        x.symbol == _symb && (x.high >= _high.toFloat || x.low <= _low.toFloat)
       )
 
     /*val _keyedStream = _trade

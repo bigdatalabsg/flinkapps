@@ -2,25 +2,47 @@ package com.bigdatalabs.flinkapps.entities
 
 object model {
 
-  case class trade(
+  case class _ctrade(
                     xchange: String,
-                    symb: String,
+                    symbol: String,
                     trdate: String,
                     open: Float,
                     high: Float,
                     low: Float,
                     close: Float,
                     volume: Integer,
-                    adj_close: Float)
+                    adj_close: Float) extends Serializable
 
-  case class atmlog (tran_id: String,
+  case class atmlog (
+                     tran_id: String,
                      tran_dt: String,
                      area: String,
                      latitude: Float,
                      longitude:Float,
                      tran_typ:String,
-                     tran_amt: Float)
+                     tran_amt: Float)extends Serializable
+
+  case class Student(
+                      stuid: Int,
+                      stuname: String,
+                      stuaddr: String,
+                      stusex: String) extends Serializable
+
+  case class Book2(
+                   bookId: Long,
+                   bookTitle: String,
+                   bookAuthor: String,
+                   bookYear: Int
+                 )
+
+  case class Sensor(
+                  sensorId:String,
+                  sensorTStamp:Long,
+                  sensorTemp:Double
+                ) extends Serializable
+
   }
+
 
 /*
 private class ProducerStringSerializationSchema(var topic: String) extends KafkaSerializationSchema[trade] {
