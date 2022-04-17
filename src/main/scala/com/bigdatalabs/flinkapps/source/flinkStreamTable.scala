@@ -9,15 +9,12 @@ package com.bigdatalabs.flinkapps.source
 import org.apache.flink.api.scala._
 import org.apache.flink.api.scala.typeutils.Types
 import org.apache.flink.api.java.utils.ParameterTool
-
 import org.apache.flink.api.common.RuntimeExecutionMode
-
+import org.apache.flink.connector.jdbc.{JdbcConnectionOptions, JdbcExecutionOptions, JdbcSink}
 import org.apache.flink.streaming.api.scala.StreamExecutionEnvironment
-
 import org.apache.flink.table.api._
 import org.apache.flink.table.api.bridge.scala._
 import org.apache.flink.table.api.bridge.scala.StreamTableEnvironment
-
 import org.apache.flink.types._
 import org.apache.flink.types.Row
 

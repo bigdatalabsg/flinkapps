@@ -1,13 +1,16 @@
 package com.bigdatalabs.flinkapps.source
 
 import com.bigdatalabs.flinkapps.entities.model.SensorReading
+
 import org.apache.flink.streaming.api.scala._
 import org.apache.flink.streaming.api.CheckpointingMode
 import org.apache.flink.streaming.api.functions.sink.{RichSinkFunction, SinkFunction}
 
-import java.sql.{Connection, DriverManager, PreparedStatement}
 import org.apache.flink.configuration.Configuration
 import org.apache.flink.connector.jdbc.JdbcSink
+import org.apache.flink.table.planner.expressions.CurrentTime
+
+import java.sql.{Connection, DriverManager, PreparedStatement}
 
 object flinkJDBCSink {
 
@@ -28,20 +31,18 @@ object flinkJDBCSink {
 
     //_inputStream.print()
 
-
-    //Source
+    //Source from Text File
     val _dataStream = _inputStream.map(
       _rowData => {
           val _dataArray = _rowData.split(",")
         SensorReading(_dataArray(0).trim,_dataArray(1).toLong,_dataArray(2).toFloat)
       }
     )
-
-    _dataStream.print()
-
-    //_dataStream.addSink(new myJDBCSink())
+    //Sink Data to Database
+    _dataStream.addSink(new myJDBCSink())
 
     _env.execute("flink to mysql")
+
   }
 
 }
@@ -55,31 +56,39 @@ class myJDBCSink() extends RichSinkFunction[SensorReading]{
   //Open Conn
   override def open(parameters: Configuration): Unit = {
     super.open(parameters)
-    var connStr="jdbc:mysql://localhost:3306/flinkops"
-    var un="root"
-    var pwd="sqlpwd"
 
-    _connParams = DriverManager.getConnection(connStr,un,pwd)
-    _insertStmt = _connParams.prepareStatement("INSERT INTO flinkops.t_flnk_tempreture(sensor_id, sensor_ts,sensor_temp) VALUES (?,?,?)")
-    _updateStmt = _connParams.prepareStatement("UPDATE flinkops.t_flnk_tempreture set sensor_ts=? and sensor_temp=? WHERE sensor_temp=?")
+    var _connStr = "jdbc:mysql://localhost:3306/flinkops"
+    var _userName = "root"
+    var _passwd = "sqlpwd"
+
+    _connParams = DriverManager.getConnection(_connStr, _userName, _passwd)
+    _insertStmt = _connParams.prepareStatement("INSERT INTO flinkops.t_flnk_tempreture(sensor_id, sensor_ts,sensor_temp) VALUES (?,?,?);")
+    _updateStmt = _connParams.prepareStatement("UPDATE flinkops.t_flnk_tempreture set sensor_ts=?,sensor_temp=? WHERE sensor_id=?;")
   }
 
+  //Insert or Update Data
   override def invoke(value: SensorReading, context: SinkFunction.Context): Unit = {
-    _updateStmt.setLong(1, value.sensorTStamp)
-    _updateStmt.setFloat(2, value.sensorTemp)
+
+    _updateStmt.setLong(1, System.currentTimeMillis()/1000)//value.sensorTStamp)
+    _updateStmt.setFloat(2,value.sensorTemp)
+    _updateStmt.setString(3, value.sensorId)
+
     _updateStmt.execute()
+
     if(_updateStmt.getUpdateCount==0) {
       _insertStmt.setString(1,value.sensorId)
-      _insertStmt.setLong(2,value.sensorTStamp)
+      _insertStmt.setLong(2,System.currentTimeMillis()/1000)//value.sensorTStamp)
       _insertStmt.setFloat(3,value.sensorTemp)
+
       _insertStmt.execute()
+
     }
   }
 
+  //Close Connections
   override def close(): Unit = {
     _updateStmt.close()
     _insertStmt.close()
     _connParams.close()
   }
-
 }

@@ -35,10 +35,10 @@ object model {
                    bookYear: Int
                  )
 
-  case class Sensor(
+  case class SensorReading(
                   sensorId:String,
                   sensorTStamp:Long,
-                  sensorTemp:Double
+                  sensorTemp:Float
                 ) extends Serializable
 
   }

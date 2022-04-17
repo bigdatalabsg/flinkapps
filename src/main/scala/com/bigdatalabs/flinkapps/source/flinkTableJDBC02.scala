@@ -1,6 +1,6 @@
 package com.bigdatalabs.flinkapps.source
 
-import com.bigdatalabs.flinkapps.entities.model.Sensor
+import com.bigdatalabs.flinkapps.entities.model.SensorReading
 import org.apache.flink.api.common.RuntimeExecutionMode
 import org.apache.flink.connector.jdbc.{JdbcConnectionOptions, JdbcExecutionOptions, JdbcSink, JdbcStatementBuilder}
 import org.apache.flink.streaming.api.CheckpointingMode
@@ -11,7 +11,7 @@ import org.apache.flink.util.Collector
 import java.awt.print.Book
 import java.sql.PreparedStatement
 
-object flinkTableJDBC {
+object flinkTableJDBC02 {
 
   //
   class Book(
@@ -42,7 +42,8 @@ object flinkTableJDBC {
       new Book(103L, "Designing Data-Intensive Applications", "Martin Kleppmann", 2017),
       new Book(104L, "Kafka: The Definitive Guide", "Gwen Shapira, Neha Narkhede, Todd Palino", 2017)
     ).addSink(
-      JdbcSink.sink("insert into t_flnk_book (bookid, booktitle, authors, bookyear) values (?, ?, ?, ?)", new JdbcStatementBuilder[Book] {
+      JdbcSink.sink(
+        "insert into flinkdb.t_flnk_book (bookid, booktitle, authors, bookyear) values (?, ?, ?, ?)", new JdbcStatementBuilder[Book] {
         override def accept(statement: PreparedStatement, book: Book): Unit = {
           statement.setLong(1, book.bookId)
           statement.setString(2, book.bookTitle)
@@ -63,5 +64,6 @@ object flinkTableJDBC {
         ))
 
     _env.execute("Flink JDBC")
+
   }
 }
