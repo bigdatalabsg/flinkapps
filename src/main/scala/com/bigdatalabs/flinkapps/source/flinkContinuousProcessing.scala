@@ -47,10 +47,10 @@ object flinkContinuousProcessing {
 		var _propFile: FileInputStream = null
 		var _params: ParameterTool = null
 
-    //Check for Propoerties File
+		//Check for Propoerties File
 		try {
-      _propFile= new FileInputStream("src/main/resources/flinkApps.properties")
-      _params = ParameterTool.fromPropertiesFile(_propFile)
+			_propFile= new FileInputStream("src/main/resources/flinkApps.properties")
+			_params = ParameterTool.fromPropertiesFile(_propFile)
 		} catch {
 			case e: FileNotFoundException => println("Couldn't find that file.")
 			case e: IOException => println("Had an IOException trying to read that file")
@@ -86,8 +86,8 @@ object flinkContinuousProcessing {
 				+ "CLOSE: " + _close + "]"
 		)
 
-    val _env: StreamExecutionEnvironment = StreamExecutionEnvironment.getExecutionEnvironment //Entry Point
-    _env.getConfig.setGlobalJobParameters(_params)
+		val _env: StreamExecutionEnvironment = StreamExecutionEnvironment.getExecutionEnvironment //Entry Point
+		_env.getConfig.setGlobalJobParameters(_params)
 		_env.enableCheckpointing(120000) // start a checkpoint every 10000 ms
 		_env.getCheckpointConfig.setMinPauseBetweenCheckpoints(10000)//Pause between Check Points - milli seconds
 		_env.getCheckpointConfig.setCheckpointingMode(CheckpointingMode.EXACTLY_ONCE)// set mode to exactly-once (this is the default)
@@ -121,6 +121,12 @@ object flinkContinuousProcessing {
 				)
 			})
 
+		/*.map(record =>
+			_ctrade(
+				record.xchange,record.symbol,record.trdate,
+				record.open,record.high,record.low,record.close,
+				record.volume,record.adj_close))*/
+
 		//Apply Schema from Entity Case Class
 		val _trade= _parsedStream.map(record =>
 			_ctrade(
@@ -135,14 +141,21 @@ object flinkContinuousProcessing {
 		//val _test = _trade.map(y=> y.xchange + "," + y.symb + "," + y.trdate + "," + y.open + "," + y.high + "," + y.low + "," + y.close + "," + y.volume + "," + y.adj_close)
 		*/
 
-			//Alter Filters amd Trigger
-			val _filteredStream = _trade
-				.filter(x =>
-					x.symbol == _symb && (x.high >= _high.toFloat || x.low <= _low.toFloat)
-				).map(y => System.currentTimeMillis() + "," + _topic_source + "," + y.xchange + ","
-				+ y.symbol + "," + y.trdate + "," + y.open + ","
-				+ y.high + "," + y.low + "," + y.close + ","
-				+ y.volume + "," + y.adj_close + "," + (y.close - y.open))
+		//Alter Filters amd Trigger
+		val _filteredStream = _trade
+			.filter(x =>
+				x.symbol == _symb && (x.high >= _high.toFloat || x.low <= _low.toFloat)
+			).map(y => System.currentTimeMillis() + "," + _topic_source + "," + y.xchange + ","
+			+ y.symbol + "," + y.trdate + "," + y.open + ","
+			+ y.high + "," + y.low + "," + y.close + ","
+			+ y.volume + "," + y.adj_close + "," + (y.close - y.open))
+			//Convert to Object
+		/*	.map(record =>
+				_ctrade(
+					record.xchange,record.symbol,record.trdate,
+					record.open,record.high,record.low,record.close,
+					record.volume,record.adj_close))
+		)*/
 
 		/*
 		val _filteredStream = _trade
@@ -169,16 +182,16 @@ object flinkContinuousProcessing {
 		_producerProp.setProperty("enable.idempotence","true")
 		_producerProp.setProperty("transaction.id",UUID.randomUUID().toString)
 
-		 val _toSink = KafkaSink.builder()
-		.setBootstrapServers(_brokers)
-		.setKafkaProducerConfig(_producerProp)
-		.setDeliverGuarantee(DeliveryGuarantee.EXACTLY_ONCE) //EXACTLY_ONCE, has issues with producer
-		.setTransactionalIdPrefix(_groupId + "-" + _fromSource)
-		.setRecordSerializer(KafkaRecordSerializationSchema.builder()
-			.setTopic(_topic_sink)
-			.setValueSerializationSchema(new SimpleStringSchema())
-			.build()
-		).build()
+		val _toSink = KafkaSink.builder()
+			.setBootstrapServers(_brokers)
+			.setKafkaProducerConfig(_producerProp)
+			.setDeliverGuarantee(DeliveryGuarantee.EXACTLY_ONCE) //EXACTLY_ONCE, has issues with producer
+			.setTransactionalIdPrefix(_groupId + "-" + _fromSource)
+			.setRecordSerializer(KafkaRecordSerializationSchema.builder()
+				.setTopic(_topic_sink)
+				.setValueSerializationSchema(new SimpleStringSchema())
+				.build()
+			).build()
 
 		//Publish to Kafka Producrer
 		_filteredStream.sinkTo(_toSink)

@@ -1,6 +1,6 @@
 package com.bigdatalabs.flinkapps.source
 
-import com.bigdatalabs.flinkapps.entities.model.SensorReading
+import com.bigdatalabs.flinkapps.entities.model.sensorReading
 import org.apache.flink.api.common.RuntimeExecutionMode
 import org.apache.flink.connector.jdbc.{JdbcConnectionOptions, JdbcExecutionOptions, JdbcSink, JdbcStatementBuilder}
 import org.apache.flink.streaming.api.CheckpointingMode

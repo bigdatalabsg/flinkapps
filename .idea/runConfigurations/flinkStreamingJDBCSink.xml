@@ -1,0 +1,11 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="flinkStreamingJDBCSink" type="Application" factoryName="Application">
+    <option name="INCLUDE_PROVIDED_SCOPE" value="true" />
+    <option name="MAIN_CLASS_NAME" value="com.bigdatalabs.flinkapps.source.flinkStreamingJDBCSink" />
+    <module name="flinkApps" />
+    <option name="PROGRAM_PARAMETERS" value="--topic_source loc-flnk-src --topic_sink loc-flnk-snk --groupId kfka-flnk" />
+    <method v="2">
+      <option name="Make" enabled="true" />
+    </method>
+  </configuration>
+</component>

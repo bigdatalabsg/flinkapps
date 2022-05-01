@@ -1,6 +1,6 @@
 package com.bigdatalabs.flinkapps.source
 
-import com.bigdatalabs.flinkapps.entities.model.SensorReading
+import com.bigdatalabs.flinkapps.entities.model.sensorReading
 
 import org.apache.flink.streaming.api.scala._
 import org.apache.flink.streaming.api.CheckpointingMode
@@ -27,6 +27,7 @@ object flinkJDBCSink {
     //_env.getCheckpointConfig.setMaxConcurrentCheckpoints(1)// allow only one checkpoint to be in progress at the same time
     //_env.getConfig.setAutoWatermarkInterval(2000)// generate a Watermark every second
 
+    //INput Stream
     val _inputStream = _env.readTextFile("file:///home/bdluser/Dataops/dataSources/sensor_data.csv")
 
     //_inputStream.print()
@@ -35,19 +36,17 @@ object flinkJDBCSink {
     val _dataStream = _inputStream.map(
       _rowData => {
           val _dataArray = _rowData.split(",")
-        SensorReading(_dataArray(0).trim,_dataArray(1).toLong,_dataArray(2).toFloat)
+        sensorReading(_dataArray(0).trim,_dataArray(1).toLong,_dataArray(2).toFloat)
       }
     )
     //Sink Data to Database
     _dataStream.addSink(new myJDBCSink())
 
     _env.execute("flink to mysql")
-
   }
-
 }
 
-class myJDBCSink() extends RichSinkFunction[SensorReading]{
+private class myJDBCSink() extends RichSinkFunction[sensorReading]{
 
   var _connParams: Connection = _
   var _insertStmt: PreparedStatement = _
@@ -67,7 +66,7 @@ class myJDBCSink() extends RichSinkFunction[SensorReading]{
   }
 
   //Insert or Update Data
-  override def invoke(value: SensorReading, context: SinkFunction.Context): Unit = {
+  override def invoke(value: sensorReading, context: SinkFunction.Context): Unit = {
 
     _updateStmt.setLong(1, System.currentTimeMillis()/1000)//value.sensorTStamp)
     _updateStmt.setFloat(2,value.sensorTemp)
@@ -91,4 +90,5 @@ class myJDBCSink() extends RichSinkFunction[SensorReading]{
     _insertStmt.close()
     _connParams.close()
   }
+
 }

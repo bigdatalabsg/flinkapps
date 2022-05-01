@@ -35,14 +35,13 @@ object model {
                    bookYear: Int
                  )
 
-  case class SensorReading(
+  case class sensorReading(
                   sensorId:String,
                   sensorTStamp:Long,
                   sensorTemp:Float
                 ) extends Serializable
 
   }
-
 
 /*
 private class ProducerStringSerializationSchema(var topic: String) extends KafkaSerializationSchema[trade] {
