@@ -61,26 +61,22 @@ private class myJDBCSink() extends RichSinkFunction[sensorReading]{
     var _passwd = "sqlpwd"
 
     _connParams = DriverManager.getConnection(_connStr, _userName, _passwd)
-    _insertStmt = _connParams.prepareStatement("INSERT INTO flinkops.t_flnk_tempreture(sensor_id, sensor_ts,sensor_temp) VALUES (?,?,?);")
-    _updateStmt = _connParams.prepareStatement("UPDATE flinkops.t_flnk_tempreture set sensor_ts=?,sensor_temp=? WHERE sensor_id=?;")
+    _insertStmt = _connParams.prepareStatement("INSERT INTO flinkops.t_flnk_sensordata(sensor_id, sensor_ts,sensor_temp) VALUES (?,?,?);")
+    _updateStmt = _connParams.prepareStatement("UPDATE flinkops.t_flnk_sensordata set sensor_ts=?,sensor_temp=? WHERE sensor_id=?;")
   }
 
   //Insert or Update Data
   override def invoke(value: sensorReading, context: SinkFunction.Context): Unit = {
-
     _updateStmt.setLong(1, System.currentTimeMillis()/1000)//value.sensorTStamp)
     _updateStmt.setFloat(2,value.sensorTemp)
     _updateStmt.setString(3, value.sensorId)
-
     _updateStmt.execute()
 
     if(_updateStmt.getUpdateCount==0) {
       _insertStmt.setString(1,value.sensorId)
       _insertStmt.setLong(2,System.currentTimeMillis()/1000)//value.sensorTStamp)
       _insertStmt.setFloat(3,value.sensorTemp)
-
       _insertStmt.execute()
-
     }
   }
 

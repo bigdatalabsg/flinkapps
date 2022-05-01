@@ -1,6 +1,12 @@
+
+
 package com.bigdatalabs.flinkapps.source
 
-import com.bigdatalabs.flinkapps.entities.model.{sensorReading, _ctrade}
+
+import org.apache.flink.connector.file.sink.FileSink
+import org.apache.flink.formats.avro.AvroWriters
+import org.apache.avro.Schema
+import com.bigdatalabs.flinkapps.entities.model.sensorReading
 import org.apache.flink.api.common.eventtime.WatermarkStrategy
 import org.apache.flink.api.common.serialization.SimpleStringSchema
 import org.apache.flink.api.java.utils.ParameterTool
@@ -11,6 +17,8 @@ import org.apache.flink.configuration.Configuration
 import org.apache.flink.connector.jdbc._
 import org.apache.flink.connector.kafka.source.KafkaSource
 import org.apache.flink.connector.kafka.source.enumerator.initializer.OffsetsInitializer
+import org.apache.flink.core.fs.FileSystem.WriteMode
+import org.apache.flink.runtime.fs.hdfs.HadoopDataOutputStream
 import org.apache.flink.table.planner.expressions.CurrentTime
 
 import java.io.{FileInputStream, FileNotFoundException, IOException}
@@ -101,9 +109,11 @@ object flinkStreamingJDBCSink {
     //_resultStream.print()
 
     //Sink Data to Database
+    //_dataStream.writeAsText("hdfs://localhost:9000/tmp/setPara", WriteMode.OVERWRITE).setParallelism(1)
     _dataStream.addSink(new mmyJDBCSink())
 
     _env.execute("flink to mysql")
+
   }
 }
 
@@ -117,13 +127,13 @@ private class mmyJDBCSink() extends RichSinkFunction[sensorReading]{
   override def open(parameters: Configuration): Unit = {
     super.open(parameters)
 
-    var _connStr = "jdbc:mysql://localhost:3306/flinkops"
-    var _userName = "root"
-    var _passwd = "sqlpwd"
+    val _connStr = "jdbc:mysql://localhost:3306/flinkops"
+    val _userName = "root"
+    val _passwd = "sqlpwd"
 
     _connParams = DriverManager.getConnection(_connStr, _userName, _passwd)
-    _insertStmt = _connParams.prepareStatement("INSERT INTO flinkops.t_flnk_tempreture(sensor_id, sensor_ts,sensor_temp) VALUES (?,?,?);")
-    _updateStmt = _connParams.prepareStatement("UPDATE flinkops.t_flnk_tempreture set sensor_ts=?,sensor_temp=? WHERE sensor_id=?;")
+    _insertStmt = _connParams.prepareStatement("INSERT INTO flinkops.t_flnk_sensordata(sensor_id, sensor_ts,sensor_temp) VALUES (?,?,?);")
+    _updateStmt = _connParams.prepareStatement("UPDATE flinkops.t_flnk_sensordata set sensor_ts=?,sensor_temp=? WHERE sensor_id=?;")
   }
   //Insert or Update Data
   override def invoke(value: sensorReading, context: SinkFunction.Context): Unit = {

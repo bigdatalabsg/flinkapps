@@ -103,7 +103,10 @@ object flinkContinuousProcessing {
 			.setTopics(_topic_source)
 			.setGroupId(_groupId)
 			.setValueOnlyDeserializer(new SimpleStringSchema())
-			.setStartingOffsets(OffsetsInitializer.latest())
+			//.setStartingOffsets(OffsetsInitializer.latest())
+			.setStartingOffsets(OffsetsInitializer.earliest())
+			//.setStartingOffsets(OffsetsInitializer.timestamp(1651400400L))
+			//.setStartingOffsets(OffsetsInitializer.timestamp(1651402000L))
 			.build()
 
 		//Receive from Kafka
@@ -145,7 +148,7 @@ object flinkContinuousProcessing {
 		val _filteredStream = _trade
 			.filter(x =>
 				x.symbol == _symb && (x.high >= _high.toFloat || x.low <= _low.toFloat)
-			).map(y => System.currentTimeMillis() + "," + _topic_source + "," + y.xchange + ","
+			).map(y => System.currentTimeMillis()/1000 + "," + _topic_source + "," + y.xchange + ","
 			+ y.symbol + "," + y.trdate + "," + y.open + ","
 			+ y.high + "," + y.low + "," + y.close + ","
 			+ y.volume + "," + y.adj_close + "," + (y.close - y.open))
@@ -195,7 +198,8 @@ object flinkContinuousProcessing {
 
 		//Publish to Kafka Producrer
 		_filteredStream.sinkTo(_toSink)
-		_filteredStream.writeAsText("/tmp/setPara", WriteMode.OVERWRITE).setParallelism(1)
+		//Sink Data to File
+		_filteredStream.writeAsText("tmp/setPara", WriteMode.OVERWRITE).setParallelism(1)
 
 		_env.execute("new flink-Kafka-Source 1.14.4")
 
