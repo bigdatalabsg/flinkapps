@@ -82,7 +82,8 @@ object flinkStreamTable {
 
     // add a printing sink and execute in DataStream API
     resultStream.print()
-    env.execute()
+
+    env.execute("Flink Stream Table")
 
     // create a DataStream
     //val dataStream = env.fromElements("Alice", "Bob", "John")

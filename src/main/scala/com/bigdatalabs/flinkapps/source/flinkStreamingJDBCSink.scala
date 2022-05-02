@@ -1,12 +1,11 @@
-
-
 package com.bigdatalabs.flinkapps.source
 
+import com.bigdatalabs.flinkapps.entities.model._
 
 import org.apache.flink.connector.file.sink.FileSink
 import org.apache.flink.formats.avro.AvroWriters
 import org.apache.avro.Schema
-import com.bigdatalabs.flinkapps.entities.model.sensorReading
+
 import org.apache.flink.api.common.eventtime.WatermarkStrategy
 import org.apache.flink.api.common.serialization.SimpleStringSchema
 import org.apache.flink.api.java.utils.ParameterTool
@@ -24,6 +23,7 @@ import org.apache.flink.table.planner.expressions.CurrentTime
 import java.io.{FileInputStream, FileNotFoundException, IOException}
 import java.sql.{Connection, DriverManager, PreparedStatement}
 
+//Streaming to JDBC Sink
 object flinkStreamingJDBCSink {
 
   def main(args: Array[String]): Unit = {
@@ -59,18 +59,17 @@ object flinkStreamingJDBCSink {
     )
 
     val _env: StreamExecutionEnvironment = StreamExecutionEnvironment.getExecutionEnvironment //Entry Point
-    _env.setParallelism(1)
+
     _env.getConfig.setGlobalJobParameters(_params)
     _env.enableCheckpointing(10000) // start a checkpoint every 10000 ms
-    /*
-        _env.getCheckpointConfig.setMinPauseBetweenCheckpoints(10000)//Pause between Check Points - milli seconds
-        _env.getCheckpointConfig.setCheckpointingMode(CheckpointingMode.EXACTLY_ONCE)// set mode to exactly-once (this is the default)
-        _env.getCheckpointConfig.setCheckpointTimeout(60000)// checkpoints have to complete within one minute, or are discarded
-        _env.getCheckpointConfig.setTolerableCheckpointFailureNumber(3)// prevent the tasks from failing if an error happens in their checkpointing, the checkpoint will just be declined.
-        _env.getCheckpointConfig.setMaxConcurrentCheckpoints(1)// allow only one checkpoint to be in progress at the same time
-        _env.getConfig.setAutoWatermarkInterval(2000)// generate a Watermark every second
-        //_env.setStreamTimeCharacteristic(TimeCharacteristic.EventTime)//Deprecated,Event Time, Ingestion Time, Processing Time
-    */
+    _env.getCheckpointConfig.setMinPauseBetweenCheckpoints(10000)//Pause between Check Points - milli seconds
+    _env.getCheckpointConfig.setCheckpointingMode(CheckpointingMode.EXACTLY_ONCE)// set mode to exactly-once (this is the default)
+    _env.getCheckpointConfig.setCheckpointTimeout(60000)// checkpoints have to complete within one minute, or are discarded
+    _env.getCheckpointConfig.setTolerableCheckpointFailureNumber(3)// prevent the tasks from failing if an error happens in their checkpointing, the checkpoint will just be declined.
+    _env.getCheckpointConfig.setMaxConcurrentCheckpoints(1)// allow only one checkpoint to be in progress at the same time
+    _env.getConfig.setAutoWatermarkInterval(2000)// generate a Watermark every second
+  //_env.setStreamTimeCharacteristic(TimeCharacteristic.EventTime)//Deprecated,Event Time, Ingestion Time, Processing Time
+    _env.setParallelism(1)
 
     //INput Stream
     //val _inputStream = _env.readTextFile("file:///home/bdluser/Dataops/dataSources/sensor_data.csv")
@@ -101,7 +100,6 @@ object flinkStreamingJDBCSink {
           _parsedRecord.sensorId,_parsedRecord.sensorTStamp,_parsedRecord.sensorTemp
         )
     ).filter(Y => Y.sensorTemp <= -10 || Y.sensorTemp >= 50)
-
     //.filter(Y => Y.sensorId == "sensor_1" && Y.sensorTemp > 8000)
 
     //Publish Result, Filter, Aggregate
@@ -109,14 +107,13 @@ object flinkStreamingJDBCSink {
     //_resultStream.print()
 
     //Sink Data to Database
-    //_dataStream.writeAsText("hdfs://localhost:9000/tmp/setPara", WriteMode.OVERWRITE).setParallelism(1)
     _dataStream.addSink(new mmyJDBCSink())
 
     _env.execute("flink to mysql")
-
   }
 }
 
+//JDBC , Insert and Update Code Blocks
 private class mmyJDBCSink() extends RichSinkFunction[sensorReading]{
 
   var _connParams: Connection = _
