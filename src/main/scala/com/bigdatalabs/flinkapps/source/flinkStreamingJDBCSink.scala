@@ -72,7 +72,7 @@ object flinkStreamingJDBCSink {
     _env.getCheckpointConfig.setTolerableCheckpointFailureNumber(3)// prevent the tasks from failing if an error happens in their checkpointing, the checkpoint will just be declined.
     _env.getCheckpointConfig.setMaxConcurrentCheckpoints(1)// allow only one checkpoint to be in progress at the same time
     _env.getConfig.setAutoWatermarkInterval(2000)// generate a Watermark every second
-  //_env.setStreamTimeCharacteristic(TimeCharacteristic.EventTime)//Deprecated,Event Time, Ingestion Time, Processing Time
+    //_env.setStreamTimeCharacteristic(TimeCharacteristic.EventTime)//Deprecated,Event Time, Ingestion Time, Processing Time
     _env.setParallelism(1)
 
     //INput Stream
@@ -93,7 +93,7 @@ object flinkStreamingJDBCSink {
     //_inputStream.print()
 
     //Parse data from Input
-    val _dataStream = _inputStream.map(
+    val _filteredStream = _inputStream.map(
       _rowData => {
         val _dataArray = _rowData.split(",")
         sensorReading(_dataArray(0).trim,_dataArray(1).toLong,_dataArray(2).toFloat)
@@ -107,32 +107,25 @@ object flinkStreamingJDBCSink {
     //.filter(Y => Y.sensorId == "sensor_1" && Y.sensorTemp <= -10 || Y.sensorTemp >= 50)
 
     //Publish Result, Filter, Aggregate
-    //val _resultStream = _dataStream.map(y=> y.sensorId + "," + y.sensorTStamp + "," + y.sensorTemp)
+    //val _resultStream = _filteredStream.map(y=> y.sensorId + "," + y.sensorTStamp + "," + y.sensorTemp)
     //_resultStream.print()
 
     //Sink Data to Database
-    _dataStream.addSink(new mmyJDBCSink())
+    _filteredStream.addSink(new mmyJDBCSink())
 
-    /*
-    *    _dataStream.map(_parsedRecord =>
-      sensorReading(
-        _parsedRecord.sensorId,_parsedRecord.sensorTStamp,_parsedRecord.sensorTemp)
-    )
-    * */
-
-    _dataStream.addSink(
-     JdbcSink.sink(
-          "INSERT INTO flinkops.t_flnk_sensordata(sensor_id, sensor_ts,sensor_temp) VALUES (?,?,?);", new JdbcStatementBuilder[sensorReading] {
-         override def accept(statement: PreparedStatement, sr: sensorReading): Unit = {
-              statement.setString(1, sr.sensorId)
-              statement.setLong(2, System.currentTimeMillis()/1000)//statement.setLong(2, sr.sensorTStamp)
-              statement.setFloat(3, sr.sensorTemp)
-            }},
-    JdbcExecutionOptions.builder()
-      .withBatchSize(1000)
-      .withBatchIntervalMs(200)
-      .withMaxRetries(5)
-      .build(),
+    _filteredStream.addSink(
+      JdbcSink.sink(
+        "INSERT INTO flinkops.t_flnk_sensordata(sensor_id, sensor_ts,sensor_temp) VALUES (?,?,?);", new JdbcStatementBuilder[sensorReading] {
+          override def accept(statement: PreparedStatement, sr: sensorReading): Unit = {
+            statement.setString(1, sr.sensorId)
+            statement.setLong(2, System.currentTimeMillis()/1000)//statement.setLong(2, sr.sensorTStamp)
+            statement.setFloat(3, sr.sensorTemp)
+          }},
+        JdbcExecutionOptions.builder()
+          .withBatchSize(1000)
+          .withBatchIntervalMs(200)
+          .withMaxRetries(5)
+          .build(),
         new JdbcConnectionOptions.JdbcConnectionOptionsBuilder()
           .withUrl("jdbc:mysql://localhost:3306/flinkops")
           //.withDriverName("org.postgresql.Driver")
@@ -141,9 +134,7 @@ object flinkStreamingJDBCSink {
           .build()
       )
     )
-
     _env.execute("flink streaming to mysql")
-
   }
 }
 
@@ -189,5 +180,4 @@ private class mmyJDBCSink() extends RichSinkFunction[sensorReading]{
     _insertStmt.close()
     _connParams.close()
   }
-
 }
