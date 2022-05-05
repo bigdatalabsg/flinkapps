@@ -13,7 +13,11 @@ import org.apache.flink.streaming.api.scala._
 import org.apache.flink.streaming.api.CheckpointingMode
 import org.apache.flink.streaming.api.functions.sink.{RichSinkFunction, SinkFunction}
 import org.apache.flink.configuration.Configuration
-import org.apache.flink.connector.jdbc._
+
+//import org.apache.flink.connector.jdbc._
+import org.apache.flink.connector.jdbc.{JdbcConnectionOptions, JdbcExecutionOptions, JdbcSink, JdbcStatementBuilder}
+import java.sql.PreparedStatement
+
 import org.apache.flink.connector.kafka.source.KafkaSource
 import org.apache.flink.connector.kafka.source.enumerator.initializer.OffsetsInitializer
 import org.apache.flink.core.fs.FileSystem.WriteMode
@@ -100,7 +104,7 @@ object flinkStreamingJDBCSink {
           _parsedRecord.sensorId,_parsedRecord.sensorTStamp,_parsedRecord.sensorTemp
         )
     ).filter(Y => Y.sensorTemp <= -10 || Y.sensorTemp >= 50)
-    //.filter(Y => Y.sensorId == "sensor_1" && Y.sensorTemp > 8000)
+    //.filter(Y => Y.sensorId == "sensor_1" && Y.sensorTemp <= -10 || Y.sensorTemp >= 50)
 
     //Publish Result, Filter, Aggregate
     //val _resultStream = _dataStream.map(y=> y.sensorId + "," + y.sensorTStamp + "," + y.sensorTemp)
@@ -109,7 +113,37 @@ object flinkStreamingJDBCSink {
     //Sink Data to Database
     _dataStream.addSink(new mmyJDBCSink())
 
-    _env.execute("flink to mysql")
+    /*
+    *    _dataStream.map(_parsedRecord =>
+      sensorReading(
+        _parsedRecord.sensorId,_parsedRecord.sensorTStamp,_parsedRecord.sensorTemp)
+    )
+    * */
+
+    _dataStream.addSink(
+     JdbcSink.sink(
+          "INSERT INTO flinkops.t_flnk_sensordata(sensor_id, sensor_ts,sensor_temp) VALUES (?,?,?);", new JdbcStatementBuilder[sensorReading] {
+         override def accept(statement: PreparedStatement, sr: sensorReading): Unit = {
+              statement.setString(1, sr.sensorId)
+              statement.setLong(2, System.currentTimeMillis()/1000)//statement.setLong(2, sr.sensorTStamp)
+              statement.setFloat(3, sr.sensorTemp)
+            }},
+    JdbcExecutionOptions.builder()
+      .withBatchSize(1000)
+      .withBatchIntervalMs(200)
+      .withMaxRetries(5)
+      .build(),
+        new JdbcConnectionOptions.JdbcConnectionOptionsBuilder()
+          .withUrl("jdbc:mysql://localhost:3306/flinkops")
+          //.withDriverName("org.postgresql.Driver")
+          .withUsername("root")
+          .withPassword("sqlpwd")
+          .build()
+      )
+    )
+
+    _env.execute("flink streaming to mysql")
+
   }
 }
 
@@ -138,7 +172,6 @@ private class mmyJDBCSink() extends RichSinkFunction[sensorReading]{
     _updateStmt.setLong(1, System.currentTimeMillis()/1000)//value.sensorTStamp)
     _updateStmt.setFloat(2,value.sensorTemp)
     _updateStmt.setString(3, value.sensorId)
-
     _updateStmt.execute()
 
     if(_updateStmt.getUpdateCount==0) {
