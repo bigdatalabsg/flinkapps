@@ -3,7 +3,7 @@ package com.bigdatalabs.flinkapps.source
 /*
  * @Author: Anand
  * @Date: 2022/04/03
- * @Description: Flink Kafka Source and Sink with New Kafka Source and Sink , Flink-1.14.4
+ * @Description: Flink Kafka Source and Sink with New Kafka Source and Sink , Flink-1.15.0
  */
 
 import org.apache.flink.api.common.RuntimeExecutionMode
