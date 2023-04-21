@@ -7,19 +7,10 @@ package com.bigdatalabs.flinkapps.source
  */
 
 import org.apache.flink.api.common.RuntimeExecutionMode
-import org.apache.flink.api.common.serialization.SimpleStringEncoder
-import org.apache.flink.api.java.typeutils.AvroUtils
-import org.apache.flink.core.fs.Path
-import org.apache.flink.streaming.api.functions.sink.filesystem.OutputFileConfig
-import org.apache.flink.streaming.api.functions.sink.filesystem.rollingpolicies.{DefaultRollingPolicy, OnCheckpointRollingPolicy}
 import org.apache.flink.streaming.api.scala.DataStream
 
 //Output Formats
-import org.apache.flink.connector.file.sink.FileSink
-import org.apache.flink.streaming.api.functions.sink.filesystem.bucketassigners.DateTimeBucketAssigner
-
 import java.io.{FileInputStream, FileNotFoundException, IOException}
-import java.util.concurrent.TimeUnit
 import java.util.{Properties, UUID}
 
 //Model
