@@ -29,7 +29,7 @@ import org.apache.flink.connector.kafka.sink.{KafkaRecordSerializationSchema, Ka
 import org.apache.flink.connector.kafka.source.KafkaSource
 import org.apache.flink.connector.kafka.source.enumerator.initializer.OffsetsInitializer
 
-object flinkContinuousProcessing {
+object flinkStreamProcessing {
 
     def main(args: Array[String]): Unit = {
 
