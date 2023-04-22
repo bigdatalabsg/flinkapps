@@ -104,10 +104,13 @@ object flinkStreamingJDBCSink {
         //_resultStream.print()
 
         //Sink Data to Database
-        _filteredStream.addSink(new myJDBCSink())
+        //Sink Data to Database for Insert Only
+        _filteredStream.addSink(new myJDBCSinkInsertOnly())
+
+        //Sink Data to Database for Insert or Update Only
+        //_filteredStream.addSink(new myJDBCSinkInsertOrUpdate())
 
         /*
-
         _filteredStream.addSink(
           JdbcSink.sink(
             "INSERT INTO flinkdb.t_flnk_tempreture(sensor_id, sensor_ts,sensor_temp) VALUES (?,?,?);", new JdbcStatementBuilder[sensorReading] {
@@ -130,16 +133,51 @@ object flinkStreamingJDBCSink {
               .build()
           )
         )
-
         */
-
         _env.execute("flink streaming to mysql")
 
     }
 }
 
 //JDBC , Insert and Update Code Blocks
-protected class myJDBCSink() extends RichSinkFunction[sensorReading] {
+
+private class myJDBCSinkInsertOnly() extends RichSinkFunction[sensorReading] {
+
+    var _connParams: Connection = _
+    var _insertStmt: PreparedStatement = _
+
+    //Open Conn
+    override def open(parameters: Configuration): Unit = {
+        super.open(parameters)
+
+        val _connStr = "jdbc:postgresql://localhost:5432/dataopsdb"
+        val _userName = "dopsuser"
+        val _passwd = "dopspwd"
+
+        _connParams = DriverManager.getConnection(_connStr, _userName, _passwd)
+
+        _insertStmt = _connParams.prepareStatement("INSERT INTO flinkdb.t_flnk_tempreture(sensor_id, sensor_ts,sensor_temp) VALUES (?,?,?);")
+    }
+
+    //Insert or Update Data
+    override def invoke(value: sensorReading, context: SinkFunction.Context): Unit = {
+
+        //Insert
+        _insertStmt.setString(1, value.sensorId)
+        _insertStmt.setLong(2, System.currentTimeMillis() / 1000) //value.sensorTStamp)
+        _insertStmt.setFloat(3, value.sensorTemp)
+        _insertStmt.execute()
+    }
+
+    //Close Connections
+    override def close(): Unit = {
+        _insertStmt.close()
+        _connParams.close()
+    }
+
+}
+
+private class myJDBCSinkInsertOrUpdate() extends RichSinkFunction[sensorReading] {
 
     var _connParams: Connection = _
     var _insertStmt: PreparedStatement = _
@@ -156,14 +194,14 @@ protected class myJDBCSink() extends RichSinkFunction[sensorReading] {
         _connParams = DriverManager.getConnection(_connStr, _userName, _passwd)
 
         _insertStmt = _connParams.prepareStatement("INSERT INTO flinkdb.t_flnk_tempreture(sensor_id, sensor_ts,sensor_temp) VALUES (?,?,?);")
-        _updateStmt = _connParams.prepareStatement("UPDATE flinkdb.t_flnk_tempreture set sensor_ts=?,sensor_temp=? WHERE sensor_id=?;")
+        //_updateStmt = _connParams.prepareStatement("UPDATE flinkdb.t_flnk_tempreture set sensor_ts=?,sensor_temp=? WHERE sensor_id=?;")
 
     }
 
     //Insert or Update Data
     override def invoke(value: sensorReading, context: SinkFunction.Context): Unit = {
 
-        //default Update
+        //Update if already exists
         _updateStmt.setLong(1, System.currentTimeMillis() / 1000) //value.sensorTStamp)
         _updateStmt.setFloat(2, value.sensorTemp)
         _updateStmt.setString(3, value.sensorId)
@@ -174,9 +212,7 @@ protected class myJDBCSink() extends RichSinkFunction[sensorReading] {
             _insertStmt.setString(1, value.sensorId)
             _insertStmt.setLong(2, System.currentTimeMillis() / 1000) //value.sensorTStamp)
             _insertStmt.setFloat(3, value.sensorTemp)
-
             _insertStmt.execute()
-
         }
     }
 
@@ -186,4 +222,5 @@ protected class myJDBCSink() extends RichSinkFunction[sensorReading] {
         _insertStmt.close()
         _connParams.close()
     }
+
 }
