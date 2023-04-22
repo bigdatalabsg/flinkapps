@@ -17,12 +17,12 @@ object flinkBatchJDBCSink {
         _env.setParallelism(1)
 
         _env.enableCheckpointing(1000) // start a checkpoint every 10000 ms
-        _env.getCheckpointConfig.setMinPauseBetweenCheckpoints(5000)//Pause between Check Points - milli seconds
-        _env.getCheckpointConfig.setCheckpointingMode(CheckpointingMode.EXACTLY_ONCE)// set mode to exactly-once (this is the default)
-        _env.getCheckpointConfig.setCheckpointTimeout(60000)// checkpoints have to complete within one minute, or are discarded
-        _env.getCheckpointConfig.setTolerableCheckpointFailureNumber(3)// prevent the tasks from failing if an error happens in their checkpointing, the checkpoint will just be declined.
-        _env.getCheckpointConfig.setMaxConcurrentCheckpoints(1)// allow only one checkpoint to be in progress at the same time
-        _env.getConfig.setAutoWatermarkInterval(2000)// generate a Watermark every second
+        _env.getCheckpointConfig.setMinPauseBetweenCheckpoints(5000) //Pause between Check Points - milli seconds
+        _env.getCheckpointConfig.setCheckpointingMode(CheckpointingMode.EXACTLY_ONCE) // set mode to exactly-once (this is the default)
+        _env.getCheckpointConfig.setCheckpointTimeout(60000) // checkpoints have to complete within one minute, or are discarded
+        _env.getCheckpointConfig.setTolerableCheckpointFailureNumber(3) // prevent the tasks from failing if an error happens in their checkpointing, the checkpoint will just be declined.
+        _env.getCheckpointConfig.setMaxConcurrentCheckpoints(1) // allow only one checkpoint to be in progress at the same time
+        _env.getConfig.setAutoWatermarkInterval(2000) // generate a Watermark every second
 
         var _propFile: FileInputStream = null
         var _params: ParameterTool = null
@@ -38,10 +38,10 @@ object flinkBatchJDBCSink {
 
         }
 
-        val _batch_file_path=_params.get("SRC_FILE_PATH")
+        val _batch_file_path = _params.get("SRC_FILE_PATH")
 
         //Input Stream
-        val _inputStream : DataStream[String] = _env.readTextFile(_batch_file_path)
+        val _inputStream: DataStream[String] = _env.readTextFile(_batch_file_path)
         _inputStream.print()
 
         //Read Each Line from File, Split at Comma and apply schema
@@ -60,60 +60,61 @@ object flinkBatchJDBCSink {
         _env.execute("Flink Batch JDBC Insert and Update")
 
     }
-}
 
-//JDBC , Insert and Update Code Blocks
+    //JDBC , Insert and Update Code Blocks
 
-class myBatchJDBCSink() extends RichSinkFunction[sensorReading] {
+    private class myBatchJDBCSink() extends RichSinkFunction[sensorReading] {
 
-    var _connParams: Connection = _
-    var _insertStmt: PreparedStatement = _
-    var _updateStmt: PreparedStatement = _
+        var _connParams: Connection = _
+        var _insertStmt: PreparedStatement = _
+        var _updateStmt: PreparedStatement = _
 
-    //Open Conn
-    override def open(parameters: Configuration): Unit = {
-        super.open(parameters)
+        //Open Conn
+        override def open(parameters: Configuration): Unit = {
+            super.open(parameters)
 
-        val _driverName = "org.postgresql.Driver"
-        val _connStr = "jdbc:postgresql://localhost:5432/dataopsdb"
-        val _userName = "dopsuser"
-        val _passwd = "dopspwd"
+            val _driverName = "org.postgresql.Driver"
+            val _connStr = "jdbc:postgresql://localhost:5432/dataopsdb"
+            val _userName = "dopsuser"
+            val _passwd = "dopspwd"
 
-        _connParams = DriverManager.getConnection(_connStr, _userName, _passwd)
+            _connParams = DriverManager.getConnection(_connStr, _userName, _passwd)
 
-        //Prepare Statements
-        _updateStmt = _connParams.prepareStatement("UPDATE flinkdb.t_flnk_tempreture set sensor_ts=?,sensor_temp=? WHERE sensor_id=?;")
-        _insertStmt = _connParams.prepareStatement("INSERT INTO flinkdb.t_flnk_tempreture(sensor_id, sensor_ts,sensor_temp) VALUES (?,?,?);")
+            //Prepare Statements
+            _updateStmt = _connParams.prepareStatement("UPDATE flinkdb.t_flnk_tempreture set sensor_ts=?,sensor_temp=? WHERE sensor_id=?;")
+            _insertStmt = _connParams.prepareStatement("INSERT INTO flinkdb.t_flnk_tempreture(sensor_id, sensor_ts,sensor_temp) VALUES (?,?,?);")
 
-    }
+        }
 
-    //Insert or Update Data
-    override def invoke(value: sensorReading, context: SinkFunction.Context): Unit = {
+        //Insert or Update Data
+        override def invoke(value: sensorReading, context: SinkFunction.Context): Unit = {
 
-        //default Update
-        _updateStmt.setLong(1, System.currentTimeMillis() / 1000) //value.sensorTStamp)
-        _updateStmt.setFloat(2, value.sensorTemp)
-        _updateStmt.setString(3, value.sensorId)
-
-        //Execute
-        _updateStmt.execute()
-
-        //Insert
-        if (_updateStmt.getUpdateCount == 0) {
-            _insertStmt.setString(1, value.sensorId)
-            _insertStmt.setLong(2, System.currentTimeMillis() / 1000) //value.sensorTStamp)
-            _insertStmt.setFloat(3, value.sensorTemp)
+            //default Update
+            _updateStmt.setLong(1, System.currentTimeMillis() / 1000) //value.sensorTStamp)
+            _updateStmt.setFloat(2, value.sensorTemp)
+            _updateStmt.setString(3, value.sensorId)
 
             //Execute
-            _insertStmt.execute()
+            _updateStmt.execute()
 
+            //Insert
+            if (_updateStmt.getUpdateCount == 0) {
+                _insertStmt.setString(1, value.sensorId)
+                _insertStmt.setLong(2, System.currentTimeMillis() / 1000) //value.sensorTStamp)
+                _insertStmt.setFloat(3, value.sensorTemp)
+
+                //Execute
+                _insertStmt.execute()
+
+            }
+        }
+
+        //Close Connections
+        override def close(): Unit = {
+            _updateStmt.close()
+            _insertStmt.close()
+            _connParams.close()
         }
     }
 
-    //Close Connections
-    override def close(): Unit = {
-        _updateStmt.close()
-        _insertStmt.close()
-        _connParams.close()
-    }
 }
