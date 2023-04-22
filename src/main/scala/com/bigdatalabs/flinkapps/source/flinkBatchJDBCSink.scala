@@ -38,10 +38,10 @@ object flinkBatchJDBCSink {
 
         }
 
-        println(_params.get("SRC_FILE_PATH"))
+        val _batch_file_path=_params.get("SRC_FILE_PATH")
 
         //Input Stream
-        val _inputStream : DataStream[String] = _env.readTextFile(_params.get("SRC_FILE_PATH"))
+        val _inputStream : DataStream[String] = _env.readTextFile(_batch_file_path)
         _inputStream.print()
 
         //Read Each Line from File, Split at Comma and apply schema
@@ -57,7 +57,7 @@ object flinkBatchJDBCSink {
         //Sink Data to Database
         _parsedStream.addSink(new myBatchJDBCSink)
 
-        _env.execute("flink to postgres")
+        _env.execute("Flink Batch JDBC Insert and Update")
 
     }
 }
@@ -81,8 +81,9 @@ class myBatchJDBCSink() extends RichSinkFunction[sensorReading] {
 
         _connParams = DriverManager.getConnection(_connStr, _userName, _passwd)
 
-        _insertStmt = _connParams.prepareStatement("INSERT INTO flinkdb.t_flnk_tempreture(sensor_id, sensor_ts,sensor_temp) VALUES (?,?,?);")
+        //Prepare Statements
         _updateStmt = _connParams.prepareStatement("UPDATE flinkdb.t_flnk_tempreture set sensor_ts=?,sensor_temp=? WHERE sensor_id=?;")
+        _insertStmt = _connParams.prepareStatement("INSERT INTO flinkdb.t_flnk_tempreture(sensor_id, sensor_ts,sensor_temp) VALUES (?,?,?);")
 
     }
 
@@ -93,6 +94,8 @@ class myBatchJDBCSink() extends RichSinkFunction[sensorReading] {
         _updateStmt.setLong(1, System.currentTimeMillis() / 1000) //value.sensorTStamp)
         _updateStmt.setFloat(2, value.sensorTemp)
         _updateStmt.setString(3, value.sensorId)
+
+        //Execute
         _updateStmt.execute()
 
         //Insert
@@ -101,6 +104,7 @@ class myBatchJDBCSink() extends RichSinkFunction[sensorReading] {
             _insertStmt.setLong(2, System.currentTimeMillis() / 1000) //value.sensorTStamp)
             _insertStmt.setFloat(3, value.sensorTemp)
 
+            //Execute
             _insertStmt.execute()
 
         }
