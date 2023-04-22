@@ -2,17 +2,12 @@ package com.bigdatalabs.flinkapps.source
 
 import com.bigdatalabs.flinkapps.entities.model.sensorReading
 import org.apache.flink.api.java.utils.ParameterTool
-import org.apache.flink.streaming.api.scala._
+import org.apache.flink.configuration.Configuration
 import org.apache.flink.streaming.api.CheckpointingMode
 import org.apache.flink.streaming.api.functions.sink.{RichSinkFunction, SinkFunction}
-import org.apache.flink.configuration.Configuration
-import org.apache.flink.connector.jdbc.JdbcSink
-import org.apache.flink.table.planner.expressions.CurrentTime
+import org.apache.flink.streaming.api.scala._
 
 import java.io.{FileInputStream, FileNotFoundException, IOException}
-import org.apache.flink.api.java.utils.ParameterTool
-
-import java.nio.file.FileSystem
 import java.sql.{Connection, DriverManager, PreparedStatement}
 
 object flinkBatchJDBCSink {
@@ -55,7 +50,7 @@ object flinkBatchJDBCSink {
                 val _arr_sensor_reading = _readLine.split(",")
                 sensorReading(
                     //xchange, symbol, trdate, open, high, low, close, volumen, adjusted close
-                    _arr_sensor_reading(0).toString.trim, _arr_sensor_reading(1).toLong, _arr_sensor_reading(2).toFloat
+                    _arr_sensor_reading(0).trim, _arr_sensor_reading(1).toLong, _arr_sensor_reading(2).toFloat
                 )
             })
 
