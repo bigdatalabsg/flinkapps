@@ -100,7 +100,7 @@ object flinkContinuousProcessing {
           .build()
 
         //Receive from Kafka
-        val _InputStream: DataStream[String] = _env.fromSource(_from_loc_kfka_src, WatermarkStrategy.noWatermarks(), "New Kafka Source from 1.14.4")
+        val _InputStream: DataStream[String] = _env.fromSource(_from_loc_kfka_src, WatermarkStrategy.noWatermarks(), "New Kafka Source from 1.15.0")
         _InputStream.print()
 
         //Read Each Line from Kafka Stream, Split at Comma and apply schema

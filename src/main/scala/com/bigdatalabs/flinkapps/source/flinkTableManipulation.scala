@@ -1,7 +1,7 @@
 package com.bigdatalabs.flinkapps.source
 
 import org.apache.flink.api.scala._
-import com.bigdatalabs.flinkapps.entities.model._ctrade
+import com.bigdatalabs.flinkapps.entities.model.dailyPrices
 import org.apache.flink.api.common.RuntimeExecutionMode
 import org.apache.flink.api.common.eventtime.WatermarkStrategy
 import org.apache.flink.api.common.serialization.SimpleStringSchema
@@ -18,116 +18,116 @@ import java.sql.PreparedStatement
 
 object flinkTableManipulation {
 
-  def main(args: Array[String]): Unit = {
+    def main(args: Array[String]): Unit = {
 
-    if (args.length < 6) {
-      System.err.println(
-        s"""
-           |Usage: --topic_source <source topic name> --topic_sink <sink topic name> --groupId <group name> --symb <symbol> --high <number> --low <number>
+        if (args.length < 6) {
+            System.err.println(
+                s"""
+                   |Usage: --topic_source <source topic name> --topic_sink <sink topic name> --groupId <group name> --symb <symbol> --high <number> --low <number>
         """.stripMargin)
-      System.exit(1)
-    }
+            System.exit(1)
+        }
 
-    //fetch Inputs
+        //fetch Inputs
 
-    val _params : ParameterTool = ParameterTool.fromArgs(args)
+        val _params : ParameterTool = ParameterTool.fromArgs(args)
 
-    val _topic_source = _params.get("topic_source")
-    val _topic_sink = _params.get("topic_sink")
-    val _groupId = _params.get("groupId")
-    val _brokers = "localhost:9092,localhost:9093,localhost:9094"
+        val _topic_source = _params.get("topic_source")
+        val _topic_sink = _params.get("topic_sink")
+        val _groupId = _params.get("groupId")
+        val _brokers = "localhost:9092,localhost:9093,localhost:9094"
 
-    //Thresholds
-    val _symb = _params.get("symb")
-    val _open = _params.get("open")
-    val _high = _params.get("high")
-    val _low = _params.get("low")
-    val _close = _params.get("close")
+        //Thresholds
+        val _symb = _params.get("symb")
+        val _open = _params.get("open")
+        val _high = _params.get("high")
+        val _low = _params.get("low")
+        val _close = _params.get("close")
 
-    println("Awaiting Stream . . .")
-    print("=======================================================================\n")
-    println(
-      "TOPIC SOURCE : " + _topic_source +","
-        + "TOPIC SINK: " + _topic_sink + "|"
-        + "GROUP: " + _groupId + ","
-        + "SYMB: " + _symb + ","
-        + "HIGH: " + _high
-        + "," + "LOW: " + _low
-    )
-
-    //
-    val _env: StreamExecutionEnvironment = StreamExecutionEnvironment.getExecutionEnvironment
-    // set the batch runtime mode
-    _env.setRuntimeMode(RuntimeExecutionMode.STREAMING)
-
-    // start a checkpoint every 10000 ms
-    _env.enableCheckpointing(120000)
-    //Pause between Check Points - milli seconds
-    // make sure 500 ms of progress happen between checkpoints
-    _env.getCheckpointConfig.setMinPauseBetweenCheckpoints(10000)
-    // set mode to exactly-once (this is the default)
-    _env.getCheckpointConfig.setCheckpointingMode(CheckpointingMode.EXACTLY_ONCE)
-    // checkpoints have to complete within one minute, or are discarded
-    _env.getCheckpointConfig.setCheckpointTimeout(60000)
-    // prevent the tasks from failing if an error happens in their checkpointing, the checkpoint will just be declined.
-    _env.getCheckpointConfig.setTolerableCheckpointFailureNumber(3)
-    // allow only one checkpoint to be in progress at the same time
-    _env.getCheckpointConfig.setMaxConcurrentCheckpoints(1)
-    // generate a Watermark every second
-    _env.getConfig.setAutoWatermarkInterval(10000)
-
-    //Event Time, Ingestion Time, Processing Time
-    //_env.setStreamTimeCharacteristic(TimeCharacteristic.EventTime) - Deprecated
-
-    val _topicSource = KafkaSource.builder[String]
-      .setBootstrapServers(_brokers)
-      .setTopics(_topic_source)
-      .setGroupId(_groupId)
-      .setValueOnlyDeserializer(new SimpleStringSchema())
-      .setStartingOffsets(OffsetsInitializer.latest())
-      .build()
-
-    //DataStream [String]
-    val _InputStream = _env.fromSource(_topicSource, WatermarkStrategy.noWatermarks(), "New Kafka Source from 1.14.4")
-    //_InputStream.print()
-
-    //Read Each Line from Kafka Stream, Split at Comma
-    val _parsedStream = _InputStream.map(
-      _readLine => {
-        val _arr_daily_prices = _readLine.split(",")
-        _ctrade(
-          _arr_daily_prices(0), _arr_daily_prices(1), _arr_daily_prices(2),
-          _arr_daily_prices(3).toFloat,_arr_daily_prices(4).toFloat,_arr_daily_prices(5).toFloat,_arr_daily_prices(6).toFloat,
-          _arr_daily_prices(7).toInt,_arr_daily_prices(8).toFloat
+        println("Awaiting Stream . . .")
+        print("=======================================================================\n")
+        println(
+            "TOPIC SOURCE : " + _topic_source +","
+              + "TOPIC SINK: " + _topic_sink + "|"
+              + "GROUP: " + _groupId + ","
+              + "SYMB: " + _symb + ","
+              + "HIGH: " + _high
+              + "," + "LOW: " + _low
         )
-      })
 
-    //Apply model from Entity Case Class
-    val _trade: DataStream[_ctrade] = _parsedStream.map(record =>
-      _ctrade(record.xchange, record.symbol, record.trdate,
-        record.open, record.high, record.low, record.close,
-        record.volume,record.adj_close))
+        //
+        val _env: StreamExecutionEnvironment = StreamExecutionEnvironment.getExecutionEnvironment
+        // set the batch runtime mode
+        _env.setRuntimeMode(RuntimeExecutionMode.STREAMING)
 
-    //Table Stream Environment
-    val _tableEnv: StreamTableEnvironment = StreamTableEnvironment.create(_env)
-    val _inputTable = _tableEnv.fromDataStream(_trade)//.as("xchange","symbol","trdate","oopen","high","low","close","volume","adj-close")
+        // start a checkpoint every 10000 ms
+        _env.enableCheckpointing(120000)
+        //Pause between Check Points - milli seconds
+        // make sure 500 ms of progress happen between checkpoints
+        _env.getCheckpointConfig.setMinPauseBetweenCheckpoints(10000)
+        // set mode to exactly-once (this is the default)
+        _env.getCheckpointConfig.setCheckpointingMode(CheckpointingMode.EXACTLY_ONCE)
+        // checkpoints have to complete within one minute, or are discarded
+        _env.getCheckpointConfig.setCheckpointTimeout(60000)
+        // prevent the tasks from failing if an error happens in their checkpointing, the checkpoint will just be declined.
+        _env.getCheckpointConfig.setTolerableCheckpointFailureNumber(3)
+        // allow only one checkpoint to be in progress at the same time
+        _env.getCheckpointConfig.setMaxConcurrentCheckpoints(1)
+        // generate a Watermark every second
+        _env.getConfig.setAutoWatermarkInterval(10000)
 
-    //_inputTable.printSchema()
+        //Event Time, Ingestion Time, Processing Time
+        //_env.setStreamTimeCharacteristic(TimeCharacteristic.EventTime) - Deprecated
 
-    _tableEnv.createTemporaryView("flinkappDB.t_flnk_daily_prices",_inputTable)
-    //val _resultTable = _tableEnv.sqlQuery("select * from t_flnk_daily_prices")
-    val _resultTable = _tableEnv.sqlQuery("SELECT symbol, YEAR(CAST(trdate AS DATE)) AS yearr, min(high) as MIN_HIGH ,max(high) AS MAX_HIGH FROM flinkappDB.t_flnk_daily_prices GROUP BY symbol, YEAR(CAST(trdate AS DATE))")
-    //_resultTable.printSchema()
+        val _topicSource = KafkaSource.builder[String]
+          .setBootstrapServers(_brokers)
+          .setTopics(_topic_source)
+          .setGroupId(_groupId)
+          .setValueOnlyDeserializer(new SimpleStringSchema())
+          .setStartingOffsets(OffsetsInitializer.latest())
+          .build()
 
-    //val _resultStream = _tableEnv.toDataStream(_resultTable)
-    val _resultStream = _tableEnv.toChangelogStream(_resultTable)
+        //DataStream [String]
+        val _InputStream = _env.fromSource(_topicSource, WatermarkStrategy.noWatermarks(), "New Kafka Source from 1.14.4")
+        //_InputStream.print()
 
-    //Print Aggretated Reults from Query
-    _resultStream.print()//.setParallelism(1)
+        //Read Each Line from Kafka Stream, Split at Comma
+        val _parsedStream = _InputStream.map(
+            _readLine => {
+                val _arr_daily_prices = _readLine.split(",")
+                dailyPrices(
+                    _arr_daily_prices(0), _arr_daily_prices(1), _arr_daily_prices(2),
+                    _arr_daily_prices(3).toFloat,_arr_daily_prices(4).toFloat,_arr_daily_prices(5).toFloat,_arr_daily_prices(6).toFloat,
+                    _arr_daily_prices(7).toInt,_arr_daily_prices(8).toFloat
+                )
+            })
 
-    _env.execute("Table API")
+        //Apply model from Entity Case Class
+        val _trade: DataStream[dailyPrices] = _parsedStream.map(record =>
+            dailyPrices(record.xchange, record.symbol, record.trdate,
+                record.open, record.high, record.low, record.close,
+                record.volume,record.adj_close))
 
-  }
+        //Table Stream Environment
+        val _tableEnv: StreamTableEnvironment = StreamTableEnvironment.create(_env)
+        val _inputTable = _tableEnv.fromDataStream(_trade)//.as("xchange","symbol","trdate","oopen","high","low","close","volume","adj-close")
+
+        //_inputTable.printSchema()
+
+        _tableEnv.createTemporaryView("flinkappDB.t_flnk_daily_prices",_inputTable)
+        //val _resultTable = _tableEnv.sqlQuery("select * from t_flnk_daily_prices")
+        val _resultTable = _tableEnv.sqlQuery("SELECT symbol, YEAR(CAST(trdate AS DATE)) AS yearr, min(high) as MIN_HIGH ,max(high) AS MAX_HIGH FROM flinkappDB.t_flnk_daily_prices GROUP BY symbol, YEAR(CAST(trdate AS DATE))")
+        //_resultTable.printSchema()
+
+        //val _resultStream = _tableEnv.toDataStream(_resultTable)
+        val _resultStream = _tableEnv.toChangelogStream(_resultTable)
+
+        //Print Aggretated Reults from Query
+        _resultStream.print()//.setParallelism(1)
+
+        _env.execute("Table API")
+
+    }
 
 }
 

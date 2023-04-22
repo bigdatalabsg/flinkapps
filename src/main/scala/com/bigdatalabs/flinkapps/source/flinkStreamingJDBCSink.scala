@@ -124,6 +124,7 @@ private class myJDBCSinkInsertOnly() extends RichSinkFunction[sensorReading] {
 
     //Open Conn
     override def open(parameters: Configuration): Unit = {
+
         super.open(parameters)
 
         val _connStr = "jdbc:postgresql://localhost:5432/dataopsdb"
