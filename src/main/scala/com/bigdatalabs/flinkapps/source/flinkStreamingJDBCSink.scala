@@ -82,7 +82,7 @@ object flinkStreamingJDBCSink {
           .build()
 
         //Receive from Kafka
-        val _inputStream: DataStream[String] = _env.fromSource(_from_loc_kfka_src, WatermarkStrategy.noWatermarks(), "New Kafka Source from 1.14.4")
+        val _inputStream: DataStream[String] = _env.fromSource(_from_loc_kfka_src, WatermarkStrategy.noWatermarks(), "New Kafka Source from 1.15.0")
         //_inputStream.print()
 
         //Parse data from Input
@@ -110,30 +110,6 @@ object flinkStreamingJDBCSink {
         //Sink Data to Database for Insert or Update Only
         //_filteredStream.addSink(new myJDBCSinkInsertOrUpdate())
 
-        /*
-        _filteredStream.addSink(
-          JdbcSink.sink(
-            "INSERT INTO flinkdb.t_flnk_tempreture(sensor_id, sensor_ts,sensor_temp) VALUES (?,?,?);", new JdbcStatementBuilder[sensorReading] {
-              override def accept(statement: PreparedStatement, sr: sensorReading): Unit = {
-                statement.setString(1, sr.sensorId)
-                statement.setLong(2, System.currentTimeMillis() / 1000) //statement.setLong(2, sr.sensorTStamp)
-                statement.setFloat(3, sr.sensorTemp)
-              }
-            },
-            JdbcExecutionOptions.builder()
-              .withBatchSize(1000)
-              .withBatchIntervalMs(200)
-              .withMaxRetries(5)
-              .build(),
-            new JdbcConnectionOptions.JdbcConnectionOptionsBuilder()
-              .withUrl("jdbc:postgresql://localhost:5432/dataopsdb")
-              .withDriverName("org.postgresql.Driver")
-              .withUsername("dopsuser")
-              .withPassword("dopspwd")
-              .build()
-          )
-        )
-        */
         _env.execute("flink streaming to mysql")
 
     }
@@ -194,7 +170,7 @@ private class myJDBCSinkInsertOrUpdate() extends RichSinkFunction[sensorReading]
         _connParams = DriverManager.getConnection(_connStr, _userName, _passwd)
 
         _insertStmt = _connParams.prepareStatement("INSERT INTO flinkdb.t_flnk_tempreture(sensor_id, sensor_ts,sensor_temp) VALUES (?,?,?);")
-        //_updateStmt = _connParams.prepareStatement("UPDATE flinkdb.t_flnk_tempreture set sensor_ts=?,sensor_temp=? WHERE sensor_id=?;")
+        _updateStmt = _connParams.prepareStatement("UPDATE flinkdb.t_flnk_tempreture set sensor_ts=?,sensor_temp=? WHERE sensor_id=?;")
 
     }
 
@@ -222,5 +198,4 @@ private class myJDBCSinkInsertOrUpdate() extends RichSinkFunction[sensorReading]
         _insertStmt.close()
         _connParams.close()
     }
-
 }
