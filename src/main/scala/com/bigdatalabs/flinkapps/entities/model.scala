@@ -2,7 +2,7 @@ package com.bigdatalabs.flinkapps.entities
 
 object model {
 
-  case class _ctrade(
+  case class dailyPrices(
                     xchange: String,
                     symbol: String,
                     trdate: String,
