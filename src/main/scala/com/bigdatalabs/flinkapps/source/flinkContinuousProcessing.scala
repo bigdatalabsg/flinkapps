@@ -39,7 +39,7 @@ object flinkContinuousProcessing {
 
         //Check for Propoerties File
         try {
-            _propFile= new FileInputStream("src/main/resources/flinkApps.properties")
+            _propFile = new FileInputStream("src/main/resources/flinkApps.properties")
             _params = ParameterTool.fromPropertiesFile(_propFile)
         } catch {
             case e: FileNotFoundException => println("Couldn't find that file.")
@@ -61,13 +61,13 @@ object flinkContinuousProcessing {
         val _low: Float = _params.getFloat("LOW")
         val _close: Float = _params.getFloat("CLOSE")
 
-        val _loc_file_snk_path =_params.get("LOC_FILE_SINK_PATH")
+        val _loc_file_snk_path = _params.get("LOC_FILE_SINK_PATH")
 
         //Print Params
         println("Awaiting Stream . . .")
         print("=======================================================================\n")
         println(
-            "[TOPIC SOURCE : " + _topic_source +","
+            "[TOPIC SOURCE : " + _topic_source + ","
               + "TOPIC SINK: " + _topic_sink + ","
               + "GROUP: " + _groupId + "]" + "|" + "["
               + "SYMB: " + _symb + ","
@@ -81,12 +81,12 @@ object flinkContinuousProcessing {
         _env.setRuntimeMode(RuntimeExecutionMode.STREAMING) //BATCH, AUTOMATIC
         _env.getConfig.setGlobalJobParameters(_params)
         _env.enableCheckpointing(10000) // start a checkpoint every 10000 ms
-        _env.getCheckpointConfig.setMinPauseBetweenCheckpoints(10000)//Pause between Check Points - milli seconds
-        _env.getCheckpointConfig.setCheckpointingMode(CheckpointingMode.EXACTLY_ONCE)// set mode to exactly-once (this is the default)
-        _env.getCheckpointConfig.setCheckpointTimeout(60000)// checkpoints have to complete within one minute, or are discarded
-        _env.getCheckpointConfig.setTolerableCheckpointFailureNumber(3)// prevent the tasks from failing if an error happens in their checkpointing, the checkpoint will just be declined.
-        _env.getCheckpointConfig.setMaxConcurrentCheckpoints(1)// allow only one checkpoint to be in progress at the same time
-        _env.getConfig.setAutoWatermarkInterval(1000)// generate a Watermark every second
+        _env.getCheckpointConfig.setMinPauseBetweenCheckpoints(10000) //Pause between Check Points - milli seconds
+        _env.getCheckpointConfig.setCheckpointingMode(CheckpointingMode.EXACTLY_ONCE) // set mode to exactly-once (this is the default)
+        _env.getCheckpointConfig.setCheckpointTimeout(60000) // checkpoints have to complete within one minute, or are discarded
+        _env.getCheckpointConfig.setTolerableCheckpointFailureNumber(3) // prevent the tasks from failing if an error happens in their checkpointing, the checkpoint will just be declined.
+        _env.getCheckpointConfig.setMaxConcurrentCheckpoints(1) // allow only one checkpoint to be in progress at the same time
+        _env.getConfig.setAutoWatermarkInterval(1000) // generate a Watermark every second
         //_env.setStreamTimeCharacteristic(TimeCharacteristic.EventTime)//Deprecated,Event Time, Ingestion Time, Processing Time
 
         //Kafka Params
@@ -100,30 +100,30 @@ object flinkContinuousProcessing {
           .build()
 
         //Receive from Kafka
-        val _InputStream : DataStream[String] = _env.fromSource(_from_loc_kfka_src, WatermarkStrategy.noWatermarks(), "New Kafka Source from 1.14.4")
-        //_InputStream.print()
+        val _InputStream: DataStream[String] = _env.fromSource(_from_loc_kfka_src, WatermarkStrategy.noWatermarks(), "New Kafka Source from 1.14.4")
+        _InputStream.print()
 
         //Read Each Line from Kafka Stream, Split at Comma and apply schema
-        val _parsedStream : DataStream[dailyPrices] = _InputStream.map(
+        val _parsedStream: DataStream[dailyPrices] = _InputStream.map(
             _readLine => {
                 val _arr_daily_prices = _readLine.split(",")
                 dailyPrices(
                     //xchange, symbol, trdate, open, high, low, close, volumen, adjusted close
                     _arr_daily_prices(0), _arr_daily_prices(1), _arr_daily_prices(2),
-                    _arr_daily_prices(3).toFloat,_arr_daily_prices(4).toFloat,_arr_daily_prices(5).toFloat,_arr_daily_prices(6).toFloat,
-                    _arr_daily_prices(7).toInt,_arr_daily_prices(8).toFloat
+                    _arr_daily_prices(3).toFloat, _arr_daily_prices(4).toFloat, _arr_daily_prices(5).toFloat, _arr_daily_prices(6).toFloat,
+                    _arr_daily_prices(7).toInt, _arr_daily_prices(8).toFloat
                 )
             })
 
-        val _trade : DataStream[dailyPrices] = _parsedStream
+        val _trade: DataStream[dailyPrices] = _parsedStream
           .map(_parsedRecord =>
               dailyPrices(
-                  _parsedRecord.xchange,_parsedRecord.symbol,_parsedRecord.trdate,
-                  _parsedRecord.open,_parsedRecord.high,_parsedRecord.low,_parsedRecord.close,
-                  _parsedRecord.volume,_parsedRecord.adj_close))
+                  _parsedRecord.xchange, _parsedRecord.symbol, _parsedRecord.trdate,
+                  _parsedRecord.open, _parsedRecord.high, _parsedRecord.low, _parsedRecord.close,
+                  _parsedRecord.volume, _parsedRecord.adj_close))
 
         //Filter, Apply Intercepting Logic
-        val _filteredStream = _trade.filter(x => x.symbol == "ABB" || x.symbol == "IBM" || x.symbol=="CAT")
+        val _filteredStream = _trade.filter(x => x.symbol == "ABB" || x.symbol == "IBM" || x.symbol == "CAT")
 
         //Test for Filtered Data
         //_filteredStream.print()
@@ -131,10 +131,10 @@ object flinkContinuousProcessing {
         //val _test = _trade.map(y=> y.xchange + "," + y.symbol + "," + y.trdate + "," + y.open + "," + y.high + "," + y.low + "," + y.close + "," + y.volume + "," + y.adj_close)
 
         //Apply Filters amd Trigger/Logic/Aggregation
-        val _filteredStream01 : DataStream[String] = _trade
-          .filter(x => x.symbol == "ABB" || x.symbol == "IBM" || x.symbol=="CAT")
+        val _filteredStream01: DataStream[String] = _trade
+          .filter(x => x.symbol == "ABB" || x.symbol == "IBM" || x.symbol == "CAT")
           /*.filter(x => x.symbol == _symb && (x.high >= _high.toFloat || x.low <= _low.toFloat))*/
-          .map(y => System.currentTimeMillis()/1000 + "," + _topic_source + ","
+          .map(y => System.currentTimeMillis() / 1000 + "," + _topic_source + ","
             + y.xchange + "," + y.symbol + "," + y.trdate + ","
             + y.open + "," + y.high + "," + y.low + "," + y.close + ","
             + y.volume + "," + y.adj_close + "," + (y.close - y.open)
@@ -144,14 +144,14 @@ object flinkContinuousProcessing {
 
         val _filteredStream02 =
             _parsedStream.filter(x =>
-                x.symbol == "ABB" || x.symbol == "IBM" || x.symbol =="CAT"	&&
-                  x.high == _high || x.low== _low &&
+                x.symbol == "ABB" || x.symbol == "IBM" || x.symbol == "CAT" &&
+                  x.high == _high || x.low == _low &&
                   extractYr(convertStringToDate(x.trdate)) >= 2010 && extractYr(convertStringToDate(x.trdate)) <= 2011
-            ).map(y => System.currentTimeMillis()/1000 + "," + _topic_source + ","
-                + y.xchange + "," + y.symbol + "," + y.trdate + ","
-                + y.open + "," + y.high + "," + y.low + "," + y.close + ","
-                + y.volume + "," + y.adj_close + "," + (y.close - y.open)
-              )
+            ).map(y => System.currentTimeMillis() / 1000 + "," + _topic_source + ","
+              + y.xchange + "," + y.symbol + "," + y.trdate + ","
+              + y.open + "," + y.high + "," + y.low + "," + y.close + ","
+              + y.volume + "," + y.adj_close + "," + (y.close - y.open)
+            )
 
         //Test for Filtered Data
         //_filteredStream02.print()
@@ -161,10 +161,10 @@ object flinkContinuousProcessing {
 
         // added for idempotency
         _producerProp.setProperty("transaction.timeout.ms", "10000")
-        _producerProp.setProperty("isolation.level","read_committed")
+        _producerProp.setProperty("isolation.level", "read_committed")
         _producerProp.setProperty("enable.auto.commit", "false")
-        _producerProp.setProperty("enable.idempotence","true")
-        _producerProp.setProperty("transaction.id",UUID.randomUUID().toString)
+        _producerProp.setProperty("enable.idempotence", "true")
+        _producerProp.setProperty("transaction.id", UUID.randomUUID().toString)
 
         //Set Consumer propperties
         val _to_loc_kfka_snk = KafkaSink.builder()
@@ -183,7 +183,7 @@ object flinkContinuousProcessing {
 
         //Sink Data to File
         //_filteredStream01.writeAsText(_loc_file_snk_path + "/" + "flinkoutput.txt", WriteMode.OVERWRITE).setParallelism(1)
-        _env.execute("new flink-Kafka-Source 1.14.4")
+        _env.execute("new flink-Kafka-Source 1.15.0")
 
     }
 }
