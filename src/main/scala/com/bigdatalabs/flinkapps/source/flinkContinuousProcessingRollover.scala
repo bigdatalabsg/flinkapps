@@ -25,7 +25,6 @@ import java.io.{FileInputStream, FileNotFoundException, IOException}
 //Model
 import com.bigdatalabs.flinkapps.common.dateFormatter.{convertStringToDate, extractYr}
 import com.bigdatalabs.flinkapps.entities.model.dailyPrices
-
 import org.apache.flink.api.java.utils.ParameterTool
 import org.apache.flink.api.scala._
 import org.apache.flink.streaming.api.CheckpointingMode
@@ -179,7 +178,7 @@ object flinkContinuousProcessingRollover {
         val _rolloverSink02: FileSink[String] = FileSink
           .forRowFormat(new Path(_loc_file_snk_path), new SimpleStringEncoder[String]("UTF-8"))
           .withOutputFileConfig(_outputFileConfig)
-          .withBucketAssigner(new DateTimeBucketAssigner[String]("yyyy-MM-dd--HH"))//Hourly Partition "yyyy-MM-dd--HH-mm"
+          .withBucketAssigner(new DateTimeBucketAssigner[String]("yyyy-MM-dd--HH")) //Hourly Partition "yyyy-MM-dd--HH-mm"
           .withRollingPolicy(
               DefaultRollingPolicy.builder()
                 .withRolloverInterval(Duration.ofMinutes(15))

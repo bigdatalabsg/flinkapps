@@ -1,25 +1,12 @@
 package com.bigdatalabs.flinkapps.source
 
-import com.bigdatalabs.flinkapps.entities.model.sensorReading
-import org.apache.flink.api.common.RuntimeExecutionMode
 import org.apache.flink.connector.jdbc.{JdbcConnectionOptions, JdbcExecutionOptions, JdbcSink, JdbcStatementBuilder}
 import org.apache.flink.streaming.api.CheckpointingMode
-import org.apache.flink.streaming.api.functions.ProcessFunction
 import org.apache.flink.streaming.api.scala._
-import org.apache.flink.util.Collector
 
-import java.awt.print.Book
 import java.sql.PreparedStatement
 
 object flinkTableJDBC02 {
-
-    //
-    class Book(
-                val bookId: Long,
-                val bookTitle: String,
-                val Authors: String,
-                val bookYear: Integer
-              )
 
     def main(args: Array[String]): Unit = {
 
@@ -27,17 +14,17 @@ object flinkTableJDBC02 {
 
         //===============================Begin Mandatory Block================================================================
         _env.enableCheckpointing(120000) // start a checkpoint every 10000 ms
-        _env.getCheckpointConfig.setMinPauseBetweenCheckpoints(10000)//Pause between Check Points - milli seconds
-        _env.getCheckpointConfig.setCheckpointingMode(CheckpointingMode.EXACTLY_ONCE)// set mode to exactly-once (this is the default)
-        _env.getCheckpointConfig.setCheckpointTimeout(60000)// checkpoints have to complete within one minute, or are discarded
-        _env.getCheckpointConfig.setTolerableCheckpointFailureNumber(3)// prevent the tasks from failing if an error happens in their checkpointing, the checkpoint will just be declined.
-        _env.getCheckpointConfig.setMaxConcurrentCheckpoints(1)// allow only one checkpoint to be in progress at the same time
-        _env.getConfig.setAutoWatermarkInterval(2000)// generate a Watermark every second
+        _env.getCheckpointConfig.setMinPauseBetweenCheckpoints(10000) //Pause between Check Points - milli seconds
+        _env.getCheckpointConfig.setCheckpointingMode(CheckpointingMode.EXACTLY_ONCE) // set mode to exactly-once (this is the default)
+        _env.getCheckpointConfig.setCheckpointTimeout(60000) // checkpoints have to complete within one minute, or are discarded
+        _env.getCheckpointConfig.setTolerableCheckpointFailureNumber(3) // prevent the tasks from failing if an error happens in their checkpointing, the checkpoint will just be declined.
+        _env.getCheckpointConfig.setMaxConcurrentCheckpoints(1) // allow only one checkpoint to be in progress at the same time
+        _env.getConfig.setAutoWatermarkInterval(2000) // generate a Watermark every second
         //_env.setStreamTimeCharacteristic(TimeCharacteristic.EventTime)//Deprecated,Event Time, Ingestion Time, Processing Time
         //===============================End Mandatory Block================================================================
 
         _env.fromElements(
-            new Book(101L,"Stream Processing with Apache Flink","Fabian Hueske, Vasiliki Kalavri",2019),
+            new Book(101L, "Stream Processing with Apache Flink", "Fabian Hueske, Vasiliki Kalavri", 2019),
             new Book(102L, "Streaming Systems", "Tyler Akidau, Slava Chernyak, Reuven Lax", 2018),
             new Book(103L, "Designing Data-Intensive Applications", "Martin Kleppmann", 2017),
             new Book(104L, "Kafka: The Definitive Guide", "Gwen Shapira, Neha Narkhede, Todd Palino", 2017)
@@ -49,7 +36,8 @@ object flinkTableJDBC02 {
                         statement.setString(2, book.bookTitle)
                         statement.setString(3, book.Authors)
                         statement.setInt(4, book.bookYear)
-                    }},
+                    }
+                },
                 JdbcExecutionOptions.builder()
                   .withBatchSize(1000)
                   .withBatchIntervalMs(200)
@@ -66,4 +54,12 @@ object flinkTableJDBC02 {
         _env.execute("Flink JDBC")
 
     }
+
+    //
+    class Book(
+                val bookId: Long,
+                val bookTitle: String,
+                val Authors: String,
+                val bookYear: Integer
+              )
 }

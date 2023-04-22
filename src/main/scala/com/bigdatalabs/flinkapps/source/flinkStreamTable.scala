@@ -6,16 +6,11 @@ package com.bigdatalabs.flinkapps.source
  * @Description: Flink Kafka Source and Sink with New Kafka Source and Sink , Flink-1.14.4
  */
 
-import org.apache.flink.api.scala._
-import org.apache.flink.api.scala.typeutils.Types
-import org.apache.flink.api.java.utils.ParameterTool
 import org.apache.flink.api.common.RuntimeExecutionMode
-import org.apache.flink.connector.jdbc.{JdbcConnectionOptions, JdbcExecutionOptions, JdbcSink}
+import org.apache.flink.api.java.utils.ParameterTool
+import org.apache.flink.api.scala.typeutils.Types
 import org.apache.flink.streaming.api.scala.StreamExecutionEnvironment
-import org.apache.flink.table.api._
-import org.apache.flink.table.api.bridge.scala._
 import org.apache.flink.table.api.bridge.scala.StreamTableEnvironment
-import org.apache.flink.types._
 import org.apache.flink.types.Row
 
 object flinkStreamTable {
@@ -47,7 +42,7 @@ object flinkStreamTable {
         println("Awaiting Stream . . .")
         println("=======================================================================\n")
         println(
-            "TOPIC SOURCE : " + _topic_source +","
+            "TOPIC SOURCE : " + _topic_source + ","
               + "TOPIC SINK: " + _topic_sink + "|"
               + "GROUP: " + _groupId + ","
               + "SYMB: " + _symb + ","
@@ -138,9 +133,6 @@ object flinkStreamTable {
         _env.execute()
 
         */
-
-
-
 
 
     }

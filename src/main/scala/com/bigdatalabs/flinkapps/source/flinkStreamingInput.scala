@@ -36,7 +36,7 @@ object flinkStreamingInput {
         }
 
         //fetch Inputs
-        val _params : ParameterTool = ParameterTool.fromArgs(args)
+        val _params: ParameterTool = ParameterTool.fromArgs(args)
 
         val _topic_source = _params.get("topic_source")
         val _topic_sink = _params.get("topic_sink")
@@ -44,15 +44,15 @@ object flinkStreamingInput {
 
         //Thresholds
         val _symb = _params.get("symb")
-        val _open =_params.get("open")
-        val _high =_params.get("high")
-        val _low =_params.get("low")
-        val _close =_params.get("close")
+        val _open = _params.get("open")
+        val _high = _params.get("high")
+        val _low = _params.get("low")
+        val _close = _params.get("close")
 
         println("Awaiting Stream . . .")
         print("=======================================================================\n")
         println(
-            "TOPIC SOURCE : " + _topic_source +","
+            "TOPIC SOURCE : " + _topic_source + ","
               + "TOPIC SINK: " + _topic_sink + "|"
               + "GROUP: " + _groupId + ","
               + "SYMB: " + _symb + ","
@@ -88,7 +88,7 @@ object flinkStreamingInput {
         _kfkaprop.setProperty("auto.offset.reset", "latest")
 
         // create a Kafka consumer
-        val _kfkaconsumer= new FlinkKafkaConsumer[String](_topic_source, new SimpleStringSchema(), _kfkaprop)
+        val _kfkaconsumer = new FlinkKafkaConsumer[String](_topic_source, new SimpleStringSchema(), _kfkaprop)
 
         //Add a DataStream, from Consumer
         val _stream = _env.addSource(_kfkaconsumer)
@@ -102,17 +102,17 @@ object flinkStreamingInput {
                 val columns = lines.split(",")
                 dailyPrices(
                     columns(0), columns(1), columns(2),
-                    columns(3).toFloat,columns(4).toFloat,columns(5).toFloat,columns(6).toFloat,
-                    columns(7).toInt,columns(8).toFloat
+                    columns(3).toFloat, columns(4).toFloat, columns(5).toFloat, columns(6).toFloat,
+                    columns(7).toInt, columns(8).toFloat
                 )
             })
 
         //Apply Schema from Entity Case Class
-        val _trade= _parsedStream.map(record =>
+        val _trade = _parsedStream.map(record =>
             dailyPrices(
-                record.xchange,record.symbol,record.trdate,
-                record.open,record.high,record.low,record.close,
-                record.volume,record.adj_close))
+                record.xchange, record.symbol, record.trdate,
+                record.open, record.high, record.low, record.close,
+                record.volume, record.adj_close))
 
         //Filter, Apply Intercepting Logic
 
@@ -121,7 +121,7 @@ object flinkStreamingInput {
 
         //
         val _keyedStream = _trade
-          .filter(x=>
+          .filter(x =>
               x.symbol == _symb //&& (x.high >= _high.toFloat || x.low <= _low.toFloat)
           )
 
