@@ -197,7 +197,7 @@ object flinkContinuousProcessingRollover {
         //Sink Data to File
         //_filteredStream01.writeAsText(_loc_file_snk_path + "/" + "flinkoutput.txt", WriteMode.OVERWRITE).setParallelism(1)
 
-        _env.execute("new flink-Kafka-Source 1.14.4")
+        _env.execute("Filesink Rolling Policy")
 
     }
 }
