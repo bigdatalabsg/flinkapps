@@ -182,7 +182,6 @@ object flinkStreamProcessing {
 
 
         //==========================================PRODUCE TO KAFKA============================================================//
-
         //Publish to Kafka Producrer
         _filteredStream01.sinkTo(_to_loc_kfka_snk)
         //_filteredStream02.sinkTo(_to_loc_kfka_snk)
