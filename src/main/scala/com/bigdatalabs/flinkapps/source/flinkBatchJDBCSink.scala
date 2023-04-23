@@ -53,7 +53,7 @@ object flinkBatchJDBCSink {
                     _arr_sensor_reading(0).trim, _arr_sensor_reading(1).toLong, _arr_sensor_reading(2).toFloat
                 )
             })
-                
+
         //Filter as Required
         //val _fileredStream: DataStream[sensorReading] = _parsedStream.filter()
 
@@ -63,7 +63,6 @@ object flinkBatchJDBCSink {
         _env.execute("Flink Batch JDBC Insert and Update")
 
     }
-
 
     //JDBC , Insert and Update Code Blocks
     class myBatchJDBCSink() extends RichSinkFunction[sensorReading] {
