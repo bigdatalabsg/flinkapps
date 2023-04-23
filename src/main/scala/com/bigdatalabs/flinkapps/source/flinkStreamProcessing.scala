@@ -100,21 +100,23 @@ object flinkStreamProcessing {
           .build()
 
         //Receive from Kafka
-        val _InputStream: DataStream[String] = _env.fromSource(_from_loc_kfka_src, WatermarkStrategy.noWatermarks(), "New Kafka Source from 1.15.0")
-        _InputStream.print()
+        val _inputStream: DataStream[String] = _env.fromSource(_from_loc_kfka_src, WatermarkStrategy.noWatermarks(), "New Kafka Source from 1.15.0")
+        //_inputStream.print()
 
         //Read Each Line from Kafka Stream, Split at Comma and apply schema
-        val _parsedStream: DataStream[dailyPrices] = _InputStream.map(
+        val _parsedStream: DataStream[dailyPrices] = _inputStream.map(
             _readLine => {
                 val _arr_daily_prices = _readLine.split(",")
                 dailyPrices(
-                    //xchange, symbol, trdate, open, high, low, close, volumen, adjusted close
-                    _arr_daily_prices(0), _arr_daily_prices(1), _arr_daily_prices(2),
-                    _arr_daily_prices(3).toFloat, _arr_daily_prices(4).toFloat, _arr_daily_prices(5).toFloat, _arr_daily_prices(6).toFloat,
-                    _arr_daily_prices(7).toInt, _arr_daily_prices(8).toFloat
+                    _arr_daily_prices(0), _arr_daily_prices(1), _arr_daily_prices(2), //xchange, symbol, trdate
+                    _arr_daily_prices(3).toFloat, _arr_daily_prices(4).toFloat, _arr_daily_prices(5).toFloat, _arr_daily_prices(6).toFloat, //open, high, low, close
+                    _arr_daily_prices(7).toInt, _arr_daily_prices(8).toFloat //volume, adjusted close
                 )
             })
 
+        //===========================================================================================================================//
+
+        //Addtional Step for Readability
         val _trade: DataStream[dailyPrices] = _parsedStream
           .map(_parsedRecord =>
               dailyPrices(
@@ -122,16 +124,18 @@ object flinkStreamProcessing {
                   _parsedRecord.open, _parsedRecord.high, _parsedRecord.low, _parsedRecord.close,
                   _parsedRecord.volume, _parsedRecord.adj_close))
 
-        //Filter, Apply Intercepting Logic
-        val _filteredStream = _trade.filter(x => x.symbol == "ABB" || x.symbol == "IBM" || x.symbol == "CAT")
 
-        //Test for Filtered Data
-        //_filteredStream.print()
-
-        //val _test = _trade.map(y=> y.xchange + "," + y.symbol + "," + y.trdate + "," + y.open + "," + y.high + "," + y.low + "," + y.close + "," + y.volume + "," + y.adj_close)
+        //Filter, Apply Intercepting Logic (SQL Operations)
+        val _filteredStream01: DataStream[String] = _trade.filter(x => x.symbol == "ABB" || x.symbol == "IBM" || x.symbol == "CAT")
+          .map(y => System.currentTimeMillis() / 1000 + "," + _topic_source + ","
+            + y.xchange + "," + y.symbol + "," + y.trdate + ","
+            + y.open + "," + y.high + "," + y.low + "," + y.close + ","
+            + y.volume + "," + y.adj_close + "," + (y.close - y.open)
+          )
+        _filteredStream01.print()
 
         //Apply Filters amd Trigger/Logic/Aggregation
-        val _filteredStream01: DataStream[String] = _trade
+        val _filteredStream02: DataStream[String] = _trade
           .filter(x => x.symbol == "ABB" || x.symbol == "IBM" || x.symbol == "CAT")
           /*.filter(x => x.symbol == _symb && (x.high >= _high.toFloat || x.low <= _low.toFloat))*/
           .map(y => System.currentTimeMillis() / 1000 + "," + _topic_source + ","
@@ -139,22 +143,20 @@ object flinkStreamProcessing {
             + y.open + "," + y.high + "," + y.low + "," + y.close + ","
             + y.volume + "," + y.adj_close + "," + (y.close - y.open)
           )
-        //Test for Filtered Data
-        //_filteredStream01.print()
-
-        val _filteredStream02 =
-            _parsedStream.filter(x =>
-                x.symbol == "ABB" || x.symbol == "IBM" || x.symbol == "CAT" &&
-                  x.high == _high || x.low == _low &&
-                  extractYr(convertStringToDate(x.trdate)) >= 2010 && extractYr(convertStringToDate(x.trdate)) <= 2011
-            ).map(y => System.currentTimeMillis() / 1000 + "," + _topic_source + ","
-              + y.xchange + "," + y.symbol + "," + y.trdate + ","
-              + y.open + "," + y.high + "," + y.low + "," + y.close + ","
-              + y.volume + "," + y.adj_close + "," + (y.close - y.open)
-            )
-
-        //Test for Filtered Data
         //_filteredStream02.print()
+
+        val _filteredStream03: DataStream[String] = _trade.filter(x =>
+            x.symbol == "ABB" || x.symbol == "IBM" || x.symbol == "CAT" &&
+              x.high == _high || x.low == _low &&
+              extractYr(convertStringToDate(x.trdate)) >= 2010 && extractYr(convertStringToDate(x.trdate)) <= 2011
+        ).map(y => System.currentTimeMillis() / 1000 + "," + _topic_source + ","
+          + y.xchange + "," + y.symbol + "," + y.trdate + ","
+          + y.open + "," + y.high + "," + y.low + "," + y.close + ","
+          + y.volume + "," + y.adj_close + "," + (y.close - y.open)
+        )
+        //_filteredStream03.print()
+
+        //==========================================PRODUCE TO KAFKA============================================================//
 
         //publish to the Producer - Result Topic
         val _producerProp = new Properties()
@@ -178,12 +180,17 @@ object flinkStreamProcessing {
             .build()
           ).build()
 
+
+        //==========================================PRODUCE TO KAFKA============================================================//
+
         //Publish to Kafka Producrer
         _filteredStream01.sinkTo(_to_loc_kfka_snk)
+        //_filteredStream02.sinkTo(_to_loc_kfka_snk)
+        //_filteredStream03.sinkTo(_to_loc_kfka_snk)
 
         //Sink Data to File
-        //_filteredStream01.writeAsText(_loc_file_snk_path + "/" + "flinkoutput.txt", WriteMode.OVERWRITE).setParallelism(1)
-        _env.execute("new flink-Kafka-Source 1.15.0")
+        //_filteredStream01.writeAsText(_loc_file_snk_path + "/" + "flinkoutput.txt", WriteMode.OVERWRITE).setParallelism(1).name("flin").formatted("csv")
+        _env.execute("new flink-Kafka-Source and Sink on 1.15.0")
 
     }
 }
