@@ -44,15 +44,18 @@ object flinkBatchJDBCSink {
         val _inputStream: DataStream[String] = _env.readTextFile(_batch_file_path)
         _inputStream.print()
 
-        //Read Each Line from File, Split at Comma and apply schema
+        //Read Each Line from File, Split at Comma and apply schema to Raw Data
         val _parsedStream: DataStream[sensorReading] = _inputStream.map(
             _readLine => {
                 val _arr_sensor_reading = _readLine.split(",")
                 sensorReading(
-                    //xchange, symbol, trdate, open, high, low, close, volumen, adjusted close
+                    //Resolve to sensor_id, timestamp,tempreture
                     _arr_sensor_reading(0).trim, _arr_sensor_reading(1).toLong, _arr_sensor_reading(2).toFloat
                 )
             })
+                
+        //Filter as Required
+        //val _fileredStream: DataStream[sensorReading] = _parsedStream.filter()
 
         //Sink Data to Database
         _parsedStream.addSink(new myBatchJDBCSink)
@@ -61,9 +64,9 @@ object flinkBatchJDBCSink {
 
     }
 
-    //JDBC , Insert and Update Code Blocks
 
-    private class myBatchJDBCSink() extends RichSinkFunction[sensorReading] {
+    //JDBC , Insert and Update Code Blocks
+    class myBatchJDBCSink() extends RichSinkFunction[sensorReading] {
 
         var _connParams: Connection = _
         var _insertStmt: PreparedStatement = _
@@ -80,28 +83,28 @@ object flinkBatchJDBCSink {
 
             _connParams = DriverManager.getConnection(_connStr, _userName, _passwd)
 
-            //Prepare Statements
+            //Prepare Template Statements for INSERT and UPDATE
             _updateStmt = _connParams.prepareStatement("UPDATE flinkdb.t_flnk_tempreture set sensor_ts=?,sensor_temp=? WHERE sensor_id=?;")
             _insertStmt = _connParams.prepareStatement("INSERT INTO flinkdb.t_flnk_tempreture(sensor_id, sensor_ts,sensor_temp) VALUES (?,?,?);")
 
         }
 
         //Insert or Update Data
-        override def invoke(value: sensorReading, context: SinkFunction.Context): Unit = {
+        override def invoke(sensorvalue: sensorReading, context: SinkFunction.Context): Unit = {
 
             //default Update
             _updateStmt.setLong(1, System.currentTimeMillis() / 1000) //value.sensorTStamp)
-            _updateStmt.setFloat(2, value.sensorTemp)
-            _updateStmt.setString(3, value.sensorId)
+            _updateStmt.setFloat(2, sensorvalue.sensorTemp)
+            _updateStmt.setString(3, sensorvalue.sensorId)
 
             //Execute
             _updateStmt.execute()
 
             //Insert
             if (_updateStmt.getUpdateCount == 0) {
-                _insertStmt.setString(1, value.sensorId)
+                _insertStmt.setString(1, sensorvalue.sensorId)
                 _insertStmt.setLong(2, System.currentTimeMillis() / 1000) //value.sensorTStamp)
-                _insertStmt.setFloat(3, value.sensorTemp)
+                _insertStmt.setFloat(3, sensorvalue.sensorTemp)
 
                 //Execute
                 _insertStmt.execute()
