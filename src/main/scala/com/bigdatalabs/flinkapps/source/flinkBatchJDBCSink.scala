@@ -14,7 +14,6 @@ object flinkBatchJDBCSink {
     def main(args: Array[String]): Unit = {
 
         val _env: StreamExecutionEnvironment = StreamExecutionEnvironment.getExecutionEnvironment //Entry Point
-        _env.setParallelism(1)
 
         _env.enableCheckpointing(1000) // start a checkpoint every 10000 ms
         _env.getCheckpointConfig.setMinPauseBetweenCheckpoints(5000) //Pause between Check Points - milli seconds
@@ -23,6 +22,8 @@ object flinkBatchJDBCSink {
         _env.getCheckpointConfig.setTolerableCheckpointFailureNumber(3) // prevent the tasks from failing if an error happens in their checkpointing, the checkpoint will just be declined.
         _env.getCheckpointConfig.setMaxConcurrentCheckpoints(1) // allow only one checkpoint to be in progress at the same time
         _env.getConfig.setAutoWatermarkInterval(2000) // generate a Watermark every second
+
+        _env.setParallelism(1)
 
         var _propFile: FileInputStream = null
         var _params: ParameterTool = null
@@ -36,32 +37,34 @@ object flinkBatchJDBCSink {
             case e: IOException => println("Had an IOException trying to read that file")
         } finally {
 
+            System.out.println("Start Processing at" + " " + System.currentTimeMillis())
+
+            val _batch_file_path = _params.get("SRC_FILE_PATH")
+
+            //Input Stream
+            val _inputStream: DataStream[String] = _env.readTextFile(_batch_file_path)
+            //_inputStream.print()
+
+            //Read Each Line from File, Split at Comma and apply schema to Raw Data
+            val _parsedStream: DataStream[sensorReading] = _inputStream.map(
+                _readLine => {
+                    val _arr_sensor_reading = _readLine.split(",")
+                    sensorReading(
+                        //Resolve to sensor_id, timestamp,tempreture
+                        _arr_sensor_reading(0).trim, _arr_sensor_reading(1).toLong, _arr_sensor_reading(2).toFloat
+                    )
+                })
+
+            //Filter as Required
+            //val _fileredStream: DataStream[sensorReading] = _parsedStream.filter()
+
+            //Sink Data to Database
+            _parsedStream.addSink(new myBatchJDBCSink)
+
+            _env.execute("Flink Batch JDBC Insert and Update")
+
+            System.out.println("End Processing at" + " " + System.currentTimeMillis())
         }
-
-        val _batch_file_path = _params.get("SRC_FILE_PATH")
-
-        //Input Stream
-        val _inputStream: DataStream[String] = _env.readTextFile(_batch_file_path)
-        _inputStream.print()
-
-        //Read Each Line from File, Split at Comma and apply schema to Raw Data
-        val _parsedStream: DataStream[sensorReading] = _inputStream.map(
-            _readLine => {
-                val _arr_sensor_reading = _readLine.split(",")
-                sensorReading(
-                    //Resolve to sensor_id, timestamp,tempreture
-                    _arr_sensor_reading(0).trim, _arr_sensor_reading(1).toLong, _arr_sensor_reading(2).toFloat
-                )
-            })
-
-        //Filter as Required
-        //val _fileredStream: DataStream[sensorReading] = _parsedStream.filter()
-
-        //Sink Data to Database
-        _parsedStream.addSink(new myBatchJDBCSink)
-
-        _env.execute("Flink Batch JDBC Insert and Update")
-
     }
 
     //JDBC , Insert and Update Code Blocks
