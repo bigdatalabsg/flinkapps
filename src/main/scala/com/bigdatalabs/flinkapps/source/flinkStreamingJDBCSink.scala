@@ -110,7 +110,7 @@ object flinkStreamingJDBCSink {
         //Sink Data to Database for Insert or Update Only
         //_filteredStream.addSink(new myJDBCSinkInsertOrUpdate())
 
-        _env.execute("flink streaming to mysql")
+        _env.execute("flink streaming to JDBC Sink")
 
     }
 
@@ -198,5 +198,4 @@ object flinkStreamingJDBCSink {
             _connParams.close()
         }
     }
-
 }
