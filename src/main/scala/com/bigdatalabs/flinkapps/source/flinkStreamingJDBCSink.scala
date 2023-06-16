@@ -103,19 +103,19 @@ object flinkStreamingJDBCSink {
         //val _resultStream = _filteredStream.map(y=> y.sensorId + "," + y.sensorTStamp + "," + y.sensorTemp)
         //_resultStream.print()
 
-        //Sink Data to Database
         //Sink Data to Database for Insert Only
-        _filteredStream.addSink(new myJDBCSinkInsertOnly())
+        //_filteredStream.addSink(new myJDBCSinkInsert())
 
-        //Sink Data to Database for Insert or Update Only
-        //_filteredStream.addSink(new myJDBCSinkInsertOrUpdate())
+        //Sink Data to Database for Upsert
+        _filteredStream.addSink(new myJDBCSinkUpsert())
 
+        //Execute
         _env.execute("flink streaming to JDBC Sink")
 
     }
 
     //JDBC , Insert and Update Code Blocks
-    private class myJDBCSinkInsertOnly() extends RichSinkFunction[sensorReading] {
+    private class myJDBCSinkInsert() extends RichSinkFunction[sensorReading] {
 
         var _connParams: Connection = _
         var _insertStmt: PreparedStatement = _
@@ -131,7 +131,7 @@ object flinkStreamingJDBCSink {
 
             _connParams = DriverManager.getConnection(_connStr, _userName, _passwd)
 
-            _insertStmt = _connParams.prepareStatement("INSERT INTO flinkdb.t_flnk_tempreture(sensor_id, sensor_ts,sensor_temp) VALUES (?,?,?);")
+            _insertStmt = _connParams.prepareStatement("INSERT INTO streamingdb.t_flnk_tempreture(sensor_id, sensor_ts,sensor_temp) VALUES (?,?,?);")
         }
 
         //Insert or Update Data
@@ -152,7 +152,7 @@ object flinkStreamingJDBCSink {
 
     }
 
-    private class myJDBCSinkInsertOrUpdate() extends RichSinkFunction[sensorReading] {
+    private class myJDBCSinkUpsert() extends RichSinkFunction[sensorReading] {
 
         var _connParams: Connection = _
         var _insertStmt: PreparedStatement = _
@@ -168,18 +168,22 @@ object flinkStreamingJDBCSink {
 
             _connParams = DriverManager.getConnection(_connStr, _userName, _passwd)
 
-            _insertStmt = _connParams.prepareStatement("INSERT INTO flinkdb.t_flnk_tempreture(sensor_id, sensor_ts,sensor_temp) VALUES (?,?,?);")
-            _updateStmt = _connParams.prepareStatement("UPDATE flinkdb.t_flnk_tempreture set sensor_ts=?,sensor_temp=? WHERE sensor_id=?;")
+            _insertStmt = _connParams.prepareStatement("INSERT INTO streamingdb.t_flnk_tempreture(sensor_id, sensor_ts,sensor_temp, iteration) VALUES (?,?,?,?);")
 
+            _updateStmt = _connParams.prepareStatement("UPDATE streamingdb.t_flnk_tempreture set sensor_ts=?,sensor_temp=sensor_temp + ?, iteration = iteration + ?  WHERE sensor_id=?;")
         }
 
         //Insert or Update Data
         override def invoke(value: sensorReading, context: SinkFunction.Context): Unit = {
 
+            var _constant = 1
+
             //Update if already exists
             _updateStmt.setLong(1, System.currentTimeMillis() / 1000) //value.sensorTStamp)
             _updateStmt.setFloat(2, value.sensorTemp)
-            _updateStmt.setString(3, value.sensorId)
+            _updateStmt.setInt(3, _constant)
+            _updateStmt.setString(4, value.sensorId)
+            System.out.println(_updateStmt)
             _updateStmt.execute()
 
             //Insert
@@ -187,6 +191,8 @@ object flinkStreamingJDBCSink {
                 _insertStmt.setString(1, value.sensorId)
                 _insertStmt.setLong(2, System.currentTimeMillis() / 1000) //value.sensorTStamp)
                 _insertStmt.setFloat(3, value.sensorTemp)
+                _insertStmt.setInt(4, _constant)
+                System.out.println(_insertStmt)
                 _insertStmt.execute()
             }
         }
