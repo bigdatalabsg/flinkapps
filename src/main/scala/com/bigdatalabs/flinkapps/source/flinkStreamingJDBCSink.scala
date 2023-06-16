@@ -27,11 +27,11 @@ import java.sql.{Connection, DriverManager, PreparedStatement}
 //Streaming to JDBC Sink
 object flinkStreamingJDBCSink {
 
-    def main(args: Array[String]): Unit = {
+    //Vars for Property file
+    var _propFile: FileInputStream = null
+    var _params: ParameterTool = null
 
-        //Vars for Property file
-        var _propFile: FileInputStream = null
-        var _params: ParameterTool = null
+    def main(args: Array[String]): Unit = {
 
         //Check for Propoerties File
         try {
@@ -125,19 +125,19 @@ object flinkStreamingJDBCSink {
 
             super.open(parameters)
 
-            val _connStr = "jdbc:postgresql://localhost:5432/dataopsdb"
-            val _userName = "dopsuser"
-            val _passwd = "dopspwd"
+            val _connStr = _params.get("POSTGRES_CONN_STRING")//"jdbc:postgresql://localhost:5432/dataopsdb"
+            val _userName = _params.get("POSTGRES_USER_NAME")//"dopsuser"
+            val _passwd = _params.get("POSTGRES_PASSWD")//"dopspwd"
 
             _connParams = DriverManager.getConnection(_connStr, _userName, _passwd)
 
             _insertStmt = _connParams.prepareStatement("INSERT INTO streamingdb.t_flnk_tempreture(sensor_id, sensor_ts,sensor_temp) VALUES (?,?,?);")
+
         }
 
         //Insert or Update Data
         override def invoke(value: sensorReading, context: SinkFunction.Context): Unit = {
-
-            //Insert
+           //Insert
             _insertStmt.setString(1, value.sensorId)
             _insertStmt.setLong(2, System.currentTimeMillis() / 1000) //value.sensorTStamp)
             _insertStmt.setFloat(3, value.sensorTemp)
@@ -149,7 +149,6 @@ object flinkStreamingJDBCSink {
             _insertStmt.close()
             _connParams.close()
         }
-
     }
 
     private class myJDBCSinkUpsert() extends RichSinkFunction[sensorReading] {
@@ -160,17 +159,19 @@ object flinkStreamingJDBCSink {
 
         //Open Conn
         override def open(parameters: Configuration): Unit = {
+
             super.open(parameters)
 
-            val _connStr = "jdbc:postgresql://localhost:5432/dataopsdb"
-            val _userName = "dopsuser"
-            val _passwd = "dopspwd"
+            val _connStr = _params.get("POSTGRES_CONN_STRING") //"jdbc:postgresql://localhost:5432/dataopsdb"
+            val _userName = _params.get("POSTGRES_USER_NAME") //"dopsuser"
+            val _passwd = _params.get("POSTGRES_PASSWD") //"dopspwd"
 
             _connParams = DriverManager.getConnection(_connStr, _userName, _passwd)
 
             _insertStmt = _connParams.prepareStatement("INSERT INTO streamingdb.t_flnk_tempreture(sensor_id, sensor_ts,sensor_temp, iteration) VALUES (?,?,?,?);")
 
             _updateStmt = _connParams.prepareStatement("UPDATE streamingdb.t_flnk_tempreture set sensor_ts=?,sensor_temp=sensor_temp + ?, iteration = iteration + ?  WHERE sensor_id=?;")
+
         }
 
         //Insert or Update Data
