@@ -2,7 +2,7 @@
   <configuration default="false" name="flinkContinuousProcessing" type="Application" factoryName="Application">
     <option name="INCLUDE_PROVIDED_SCOPE" value="true" />
     <option name="MAIN_CLASS_NAME" value="com.bigdatalabs.flinkapps.source.flinkContinuousProcessing" />
-    <module name="flinkApps" />
+    <module name="flinkapps" />
     <option name="PROGRAM_PARAMETERS" value="--topic_source loc-flnk-rollover --topic_sink loc-kfka-snk --groupId flnk-kfka --symb ABB --high 50 --low 10" />
     <method v="2">
       <option name="Make" enabled="true" />
